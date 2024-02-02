@@ -106,7 +106,7 @@ def latexml(math_code, as_block=False):
 
     result1 = subprocess.run(args1, input=math_code,
                              capture_output=True, text=True)
-    if result1.stdout:
+    if result1.stderr:
         result1.stderr = '\n'.join(line for line in result1.stderr.splitlines()
                                    if line.startswith('Error:')
                                    or line.startswith('Warning:')
@@ -122,6 +122,7 @@ def latexml(math_code, as_block=False):
              '--nocrossref',
              '--nographicimages',
              '--nopictureimages',
+             '--nodefaultresources',  # do not copy *.css files to output dir
              '--'
              ]
     result2 = subprocess.run(args2, input=result1.stdout,
