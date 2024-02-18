@@ -239,6 +239,7 @@ class Writer(writers.Writer):
          ),
         )
 
+    relative_path_settings = ('template',)
     settings_defaults = {'sectnum_depth': 0}  # updated by SectNum transform
     config_section = 'latex2e writer'
     config_section_dependencies = ('writers', 'latex writers')
@@ -1344,7 +1345,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
                            for path in stylesheet_list]
 
         # PDF setup
-        if self.hyperlink_color in ('0', 'false', 'False', ''):
+        if self.hyperlink_color.lower() in ('0', 'false', ''):
             self.hyperref_options = ''
         else:
             self.hyperref_options = ('colorlinks=true,'

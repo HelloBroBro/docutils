@@ -59,6 +59,7 @@ import optparse
 from optparse import SUPPRESS_HELP
 import os
 import os.path
+from pathlib import Path
 import sys
 import warnings
 
@@ -384,19 +385,23 @@ def make_paths_absolute(pathdict, keys, base_path=None):
     `OptionParser.relative_path_settings`.
     """
     if base_path is None:
-        base_path = os.getcwd()
+        base_path = Path.cwd()
+    else:
+        base_path = Path(base_path)
     for key in keys:
         if key in pathdict:
             value = pathdict[key]
             if isinstance(value, list):
-                value = [make_one_path_absolute(base_path, path)
-                         for path in value]
+                value = [str((base_path/path).resolve()) for path in value]
             elif value:
-                value = make_one_path_absolute(base_path, value)
+                value = str((base_path/value).resolve())
             pathdict[key] = value
 
 
 def make_one_path_absolute(base_path, path):
+    # deprecated, will be removed
+    warnings.warn('frontend.make_one_path_absolute() will be removed '
+                  'in Docutils 0.23.', DeprecationWarning, stacklevel=2)
     return os.path.abspath(os.path.join(base_path, path))
 
 
@@ -601,7 +606,7 @@ class OptionParser(optparse.OptionParser, docutils.SettingsSpec):
           {'dest': 'toc_backlinks', 'action': 'store_false'}),
          ('Link from footnotes/citations to references. (default)',
           ['--footnote-backlinks'],
-          {'action': 'store_true', 'default': 1,
+          {'action': 'store_true', 'default': True,
            'validator': validate_boolean}),
          ('Disable backlinks from footnotes and citations.',
           ['--no-footnote-backlinks'],
@@ -609,7 +614,7 @@ class OptionParser(optparse.OptionParser, docutils.SettingsSpec):
          ('Enable section numbering by Docutils.  (default)',
           ['--section-numbering'],
           {'action': 'store_true', 'dest': 'sectnum_xform',
-           'default': 1, 'validator': validate_boolean}),
+           'default': True, 'validator': validate_boolean}),
          ('Disable section numbering by Docutils.',
           ['--no-section-numbering'],
           {'action': 'store_false', 'dest': 'sectnum_xform'}),
@@ -882,7 +887,10 @@ class OptionParser(optparse.OptionParser, docutils.SettingsSpec):
         return source, destination
 
     def set_defaults_from_dict(self, defaults):
-        # not used, deprecated, will be removed
+        # deprecated, will be removed
+        warnings.warn('OptionParser.set_defaults_from_dict() will be removed '
+                      'in Docutils 0.22 or with the switch to ArgumentParser.',
+                      DeprecationWarning, stacklevel=2)
         self.defaults.update(defaults)
 
     def get_default_values(self):
@@ -934,7 +942,7 @@ class ConfigParser(configparser.RawConfigParser):
     old_warning = (
         'The "[option]" section is deprecated.\n'
         'Support for old-format configuration files will be removed in '
-        'Docutils 0.21 or later.  Please revise your configuration files.  '
+        'Docutils 2.0.  Please revise your configuration files.  '
         'See <https://docutils.sourceforge.io/docs/user/config.html>, '
         'section "Old-Format Configuration Files".')
 

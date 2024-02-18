@@ -69,7 +69,7 @@ class Writer(writers.Writer):
          ('Embed the stylesheet(s) in the output HTML file.  The stylesheet '
           'files must be accessible during processing. (default)',
           ['--embed-stylesheet'],
-          {'default': 1, 'action': 'store_true',
+          {'default': True, 'action': 'store_true',
            'validator': frontend.validate_boolean}),
          ('Link to the stylesheet(s) in the output HTML file. ',
           ['--link-stylesheet'],
@@ -135,6 +135,8 @@ class Writer(writers.Writer):
         )
 
     settings_defaults = {'output_encoding_error_handler': 'xmlcharrefreplace'}
+
+    relative_path_settings = ('template',)
 
     config_section = 'html base writer'  # overwrite in subclass
     config_section_dependencies = ('writers', 'html writers')
