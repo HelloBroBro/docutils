@@ -1850,6 +1850,8 @@ class LaTeXTranslator(nodes.NodeVisitor):
 
     def depart_classifier(self, node):
         self.out.append('})')
+        if node.next_node(nodes.term, descend=False, siblings=True):
+            self.out.append('\n')
 
     def visit_colspec(self, node):
         self.active_table.visit_colspec(node)
@@ -1911,7 +1913,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
         pass
 
     def depart_definition(self, node):
-        self.out.append('\n')                # TODO: just pass?
+        pass
 
     def visit_definition_list(self, node):
         self.duclass_open(node)
@@ -1925,7 +1927,8 @@ class LaTeXTranslator(nodes.NodeVisitor):
         pass
 
     def depart_definition_list_item(self, node):
-        pass
+        if node.next_node(descend=False, siblings=True) is not None:
+            self.out.append('\n')                # TODO: just pass?
 
     def visit_description(self, node):
         self.out.append(' ')
@@ -2706,7 +2709,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
         pass
 
     def visit_option_group(self, node):
-        self.out.append('\n\\item[')
+        self.out.append('\\item[')
         # flag for first option
         self.context.append(0)
 
@@ -2719,7 +2722,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
             self.fallbacks['_providelength'] = PreambleCmds.providelength
             self.fallbacks['optionlist'] = PreambleCmds.optionlist
         self.duclass_open(node)
-        self.out.append('\\begin{DUoptionlist}')
+        self.out.append('\\begin{DUoptionlist}\n')
 
     def depart_option_list(self, node):
         self.out.append('\\end{DUoptionlist}\n')
@@ -3069,7 +3072,9 @@ class LaTeXTranslator(nodes.NodeVisitor):
         # Do we need a \leavevmode (line break if the field body begins
         # with a list or environment)?
         next_node = node.next_node(descend=False, siblings=True)
-        if not isinstance(next_node, nodes.classifier):
+        if isinstance(next_node, nodes.term):
+            self.out.append('\n')
+        elif not isinstance(next_node, nodes.classifier):
             self.out.append(self.term_postfix(next_node))
 
     def visit_tgroup(self, node):
