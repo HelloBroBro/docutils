@@ -97,7 +97,8 @@ _`Simple elements`
 
 _`Empty elements`
   | contain neither child elements nor text.
-  | Examples: `\<image>`_, `\<transition>`_, `\<pending>`_
+  | Category members: `\<colspec>`_, `\<image>`_, `\<meta>`_,
+    `\<pending>`_, `\<transition>`_
 
 .. [#] This is unlike the much looser HTML_ document model,
    where paragraphs and text data may occur at the same level.
@@ -277,8 +278,9 @@ text data, most inline elements may also contain further inline elements.
               :depth: 1
 
 Each element in the DTD (document type definition) is described in its
-own section below.  Each section contains an introduction plus the
-following subsections:
+own section below.  Each section contains the following items:
+
+* Summary description (up to two sentences).
 
 * Details (of element relationships and semantics):
 
@@ -303,7 +305,9 @@ following subsections:
 
   :Parameter Entities:
     Lists the `parameter entities <parameter entity reference_>`__
-    which directly or indirectly include the element.
+    which directly or indirectly include the element (if applicable).
+
+* Additional free text description and explanations (optional).
 
 * Examples: reStructuredText_ examples are shown along with
   fragments of the document trees resulting from parsing.
@@ -345,9 +349,6 @@ The <abbreviation> element is an inline element representing an
 *abbreviation*, a shortened or contracted form of a word or phrase
 used to represent the whole.
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <abbreviation> is analogous to the DocBook_ <abbrev> element
              and similar to the HTML_ <abbr> element.
@@ -355,7 +356,7 @@ Details
 :Processing: May be used to semantically mark the presence of an
              abbreviation in the text for styling or scripting purposes.
              Writers may ignore the element and just render its contents.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <abbreviation>.
 :Children:   <abbreviation> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
@@ -382,9 +383,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <acronym> element is an inline element used to represent an
 *acronym* (abbreviation formed by the initial letters of other words).
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <acronym> is analogous to the DocBook_ <acronym> element.
              In HTML_, the <abbr> element is used for both,
@@ -392,7 +390,7 @@ Details
 :Processing: May be used to semantically mark the presence of an
              acronym in the text for styling or scripting purposes.
              Writers may ignore the element and just render its contents.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <acronym>.
 :Children:   <acronym> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
@@ -418,12 +416,7 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <address> element holds the surface mailing address information
 for the author(s) (individual or group) of the document, or a third-party
-contact address.  Its structure is identical to that of the
-`\<literal_block>`_ element: whitespace is significant, especially
-newlines.
-
-Details
--------
+contact address.
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <address> is analogous to the DocBook_ <address> element.
@@ -472,13 +465,6 @@ context.
 The <admonition> element is a generic, titled *admonition*,
 a distinctive and self-contained notice.
 
-See also the specific admonition elements
-`\<attention>`_ `\<caution>`_, `\<danger>`_, `\<error>`_, `\<hint>`_,
-`\<important>`_, `\<note>`_, `\<tip>`_, and `\<warning>`_.
-
-Details
--------
-
 :Category:   `Compound Body Elements`_
 
 :Analogues:  The generic <admonition> has no direct analogues in common DTDs.
@@ -502,6 +488,10 @@ Details
              includes <admonition>.  The `%structure.model`_
              parameter entity indirectly includes <admonition>.
 
+See also the _`specific admonition elements`
+`\<attention>`_ `\<caution>`_, `\<danger>`_, `\<error>`_, `\<hint>`_,
+`\<important>`_, `\<note>`_, `\<tip>`_, and `\<warning>`_.
+
 Examples
 --------
 
@@ -524,14 +514,8 @@ Pseudo-XML_ fragment from simple parsing::
 <attention>
 ===========
 
-The <attention> element is an *admonition*, a distinctive and
-self-contained notice. See also the generic `\<admonition>`_
-and the other specific admonition elements `\<caution>`_,
-`\<danger>`_, `\<error>`_, `\<hint>`_, `\<important>`_, `\<note>`_,
-`\<tip>`_, and `\<warning>`_.
-
-Details
--------
+The <attention> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <attention> has no direct analogues in common DTDs.
@@ -546,6 +530,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <attention>.  The `%structure.model`_
              parameter entity indirectly includes <attention>.
+
+See also the generic `\<admonition>`_ and the other
+`specific admonition elements`_.
 
 Examples
 --------
@@ -572,9 +559,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <author> element holds the name of the author (or one of the authors)
 of the document.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <author> is analogous to the DocBook_ <author> element.
@@ -616,9 +600,6 @@ context.
 
 The <authors> element is a container for author information for
 documents with multiple authors.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <authors> is analogous to the DocBook_ <authorgroup> element.
@@ -670,9 +651,6 @@ context.
 The <block_quote> element is used for quotations set off from the
 main text (standalone).
 
-Details
--------
-
 :Category:   `Compound Body Elements`_
 :Analogues:  <block_quote> is analogous to the <blockquote> element
              in both HTML and DocBook_.
@@ -718,9 +696,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <bullet_list> element contains `\<list_item>`_ elements which are
 uniformly marked with bullets.  Bullets are typically simple dingbats
 (symbols) such as circles and squares.
-
-Details
--------
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <bullet_list> is analogous to the HTML<ul> element [#]_
@@ -779,14 +754,9 @@ See `\<list_item>`_ for another example.
 <caution>
 =========
 
-The <caution> element is an *admonition*, a distinctive and
+The <caution> element is a specific *admonition*, a distinctive and
 self-contained notice. See also the generic `\<admonition>`_ and the
-other specific admonition elements `\<attention>`_, `\<danger>`_,
-`\<error>`_, `\<hint>`_, `\<important>`_, `\<note>`_, `\<tip>`_, and
-`\<warning>`_.
-
-Details
--------
+other `specific admonition elements`_.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <caution> is analogous to the `DocBook \<caution>`_ element.
@@ -834,9 +804,6 @@ The <classifier> element contains the classification or type
 of the `\<term>`_ being defined in a `\<definition_list>`_.
 For example, it can be used to indicate the type of a variable.
 
-Details
--------
-
 :Category:   `Body Subelements`_ (simple)
 :Analogues:  <classifier> has no direct analogues in common DTDs.
              It can be emulated with primitives or type effects.
@@ -882,9 +849,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <colspec> element contains specifications for a column in a `\<table>`_.
 
-Details
--------
-
 :Category:   `Body Subelements`_
 :Analogues:  <colspec> is  defined in the `XML Exchange Table Model DTD`_.
              [#extblx]_  It is analogous to the DocBook_ <colspec> element.
@@ -928,9 +892,6 @@ See `\<table>`_.
 
 The <compound> element combines multiple `body elements`_
 to a single logical paragraph.
-
-Details
--------
 
 :Category:   `Body Elements`_
 
@@ -993,9 +954,6 @@ The <contact> element holds contact information for the author
 (individual or group) of the document, or a third-party contact.
 It is typically used for an email or web address.
 
-Details
--------
-
 :Category:   `Bibliographic Elements`_
 :Analogues:  <contact> is analogous to the DocBook_ <email> element.
              The HTML <address> element serves a similar purpose.
@@ -1038,9 +996,6 @@ context.
 
 The <container> element groups multiple `body elements`_ for user- or
 application-specific purposes.
-
-Details
--------
 
 :Category:   `Body Elements`_
 
@@ -1096,9 +1051,6 @@ The HTML output can be placed in a common box with the custom CSS rule ::
 The <copyright> element contains the document's copyright statement.
 
 
-Details
--------
-
 :Category:   `Bibliographic Elements`_
 :Analogues:  <copyright> is analogous to the DocBook_ <copyright> element.
 :Processing: See `\<docinfo>`_.
@@ -1136,14 +1088,8 @@ including processing context.
 <danger>
 ========
 
-The <danger> element is an *admonition*, a distinctive and
-self-contained notice. See also the generic `\<admonition>`_
-and the other specific admonition elements `\<attention>`_,
-`\<caution>`_, `\<error>`_, `\<hint>`_, `\<important>`_,
-`\<note>`_, `\<tip>`_, and `\<warning>`_.
-
-Details
--------
+The <danger> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <danger> has no direct analogues in common DTDs.
@@ -1158,6 +1104,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <danger>.  The `%structure.model`_
              parameter entity indirectly includes <danger>.
+
+See also the generic `\<admonition>`_ and the other
+`specific admonition elements`_.
 
 Examples
 --------
@@ -1178,9 +1127,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <date> element contains the date of publication, release, or
 last modification of the document.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <date> is analogous to the DocBook_ <date> element.
@@ -1223,9 +1169,6 @@ The <decoration> element is a container for `\<header>`_ and `\<footer>`_
 elements and potential future extensions.  These elements are used for
 notes, time/datestamp, processing information, etc.
 
-Details
--------
-
 :Category:   `Structural Subelements`_
 :Analogues:  There are no direct analogies to <decoration> in HTML or
              in DocBook.
@@ -1248,9 +1191,6 @@ See `\<header>`_ and `\<footer>`_.
 The <definition> element is a container for the body elements
 used to define a `\<term>`_ in a `\<definition_list>`_.
 
-Details
--------
-
 :Category:   `Body Subelements`_ (compound)
 :Analogues:  <definition> is analogous to the HTML <dd> element
              and to the DocBook_ <listitem> element
@@ -1271,11 +1211,7 @@ See the examples for the `\<definition_list>`_,
 
 The <definition_list> element contains a list of terms and their
 definitions.  It can be used for glossaries or dictionaries, to
-describe or classify things, for dialogues, or to itemize subtopics
-(such as in this reference).
-
-Details
--------
+describe or classify things, for dialogues, or to itemize subtopics.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <definition_list> is analogous to the HTML <dl> element
@@ -1291,6 +1227,8 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <definition_list>. The `%structure.model`_
              parameter entity indirectly includes <definition_list>.
+
+See also `\<field_list>`_.
 
 Examples
 --------
@@ -1331,9 +1269,6 @@ See `\<definition_list_item>`_ and `\<classifier>`_ for further examples.
 
 The <definition_list_item> element contains a single
 `\<term>`_/`\<definition>`_ pair (with optional `\<classifier>`_).
-
-Details
--------
 
 :Category:   `Body Subelements`_ (compound)
 
@@ -1405,11 +1340,8 @@ See `\<definition_list>`_ and `\<classifier>`_ for further examples.
 <description>
 =============
 
-The <description> element contains body elements, describing the
-purpose or effect of a command-line option or group of options.
-
-Details
--------
+The <description> element is the part of an `\<option_list>`_ item that
+contains the description of a command-line option or group of options.
 
 :Category:   `Body Subelements`_
 :Analogues:  <description> has no direct analogues in common DTDs.
@@ -1429,11 +1361,6 @@ See the examples for the `\<option_list>`_ element.
 The <docinfo> element is a container for *displayed* document bibliographic
 data, or meta-data (data about the document).  It corresponds to the
 front matter of a book, such as the title page and copyright page.
-
-See also the `\<meta>`_ element (for hidden meta-data).
-
-Details
--------
 
 :Category:   `Structural Subelements`_
 
@@ -1457,6 +1384,8 @@ Details
 :Children:   <docinfo> elements contain `bibliographic elements`_.
 
 :Attributes: The <docinfo> element contains only the `common attributes`_.
+
+See also the `\<meta>`_ element (for hidden meta-data).
 
 
 Examples
@@ -1522,20 +1451,8 @@ see the individual examples for the various `bibliographic elements`_.
 <doctest_block>
 ===============
 
-The <doctest_block> element is a Python-specific variant of
-`\<literal_block>`_.  It is a block of text where line breaks and
-whitespace are significant and must be preserved.
-
-<doctest_block> elements are used for interactive Python interpreter
-sessions, which are distinguished by their input prompt: ``>>>``.
-They are meant to illustrate usage by example, and provide an elegant
-and powerful testing environment via the `doctest module`_ in the
-Python standard library.
-
-.. _doctest module: https://docs.python.org/3/library/doctest.html
-
-Details
--------
+The <doctest_block> element is a Python-specific variant of a
+`\<literal_block>`_.
 
 :Category:   `Simple Body Elements`_
 :Analogues:  <doctest_block> is analogous to the HTML <pre> element
@@ -1554,6 +1471,14 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <doctest_block>.  The `%structure.model`_
              parameter entity indirectly includes <doctest_block>.
+
+<doctest_block> elements are used for interactive Python interpreter
+sessions, which are distinguished by their input prompt: ``>>>``.
+They are meant to illustrate usage by example, and provide an elegant
+and powerful testing environment via the `doctest module`_ in the
+Python standard library.
+
+.. _doctest module: https://docs.python.org/3/library/doctest.html
 
 Examples
 --------
@@ -1578,12 +1503,7 @@ Pseudo-XML_ fragment from simple parsing::
 ==========
 
 The <document> element is the root (topmost) element of the Docutils
-document tree.  <document> is the direct or indirect ancestor of
-every other element in the tree.  It encloses the entire document
-tree.  It is the starting point for a document.
-
-Details
--------
+document tree.
 
 :Category:   `Root Element`_
 
@@ -1603,25 +1523,30 @@ Details
                  (docinfo, transition?)?,
                  `%structure.model`_; )
 
-             Depending on the source of the data and the stage of
-             processing, the "document" may not initially contain a
-             "title".  A document title is not directly representable in
-             reStructuredText_.  Instead, a lone top-level section may
-             have its title promoted to become the document `\<title>`_,
-             and similarly for a lone second-level (sub)section's title
-             to become the document `\<subtitle>`_.
-
-             The contents of "`\<decoration>`_" may be specified in
-             a document, constructed programmatically, or both.
-             The "`\<docinfo>`_" may be transformed from an initial
-             `\<field_list>`_.
-
              See the `%structure.model`_ parameter entity for details of
              the body of a <document>.
 
 :Attributes: The <document> element contains the `common attributes`_
              plus an optional title_ attribute which stores the document
              title metadata.
+
+<document> is the direct or indirect ancestor of every other element in
+the tree.  It encloses the entire document tree.  It is the starting
+point for a document.
+
+
+Depending on the source of the data and the stage of processing,
+the <document> may not initially contain a `\<title>`_.
+A document title is not directly representable in reStructuredText_.
+Instead, the `DocTitle transform`_ may promote a lone top-level section
+title to become the document `\<title>`_, and similarly a lone
+second-level (sub)section's title to become the document `\<subtitle>`_.
+
+The contents of "`\<decoration>`_" may be specified in a document,
+constructed programmatically, or both.
+
+The "`\<docinfo>`_" may be transformed from an initial `\<field_list>`_.
+
 
 Examples
 --------
@@ -1658,14 +1583,11 @@ document title::
 The <emphasis> element is an inline element representing
 text that has *stress emphasis*.
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <emphasis> is analogous to the HTML_ <em> element
              and the DocBook_ <emphasis> element.
 :Processing: Typically displayed in italic type.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <emphasis>.
 :Children:   <emphasis> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
@@ -1694,9 +1616,6 @@ Pseudo-XML_ fragment from simple parsing::
 =======
 
 The <entry> element represents one cell of a `\<table>`_.
-
-Details
--------
 
 :Category:   `Body Subelements`_
 :Analogues:  <entry> is defined in the `XML Exchange Table Model DTD`_.
@@ -1727,9 +1646,6 @@ See `\<table>`_.
 The <enumerated_list> element contains `\<list_item>`_ elements which are
 uniformly marked with enumerator labels.
 
-Details
--------
-
 :Category:   `Compound Body Elements`_
 
 :Analogues:  <enumerated_list> is analogous to the HTML <ol> element
@@ -1748,30 +1664,8 @@ Details
 :Attributes: The <enumerated_list> element contains the `common attributes`_
              plus enumtype_, prefix_, suffix_, and start_.
 
-             ``enumtype`` is used to record the intended
-             enumeration sequence, one of
-             "arabic" (1, 2, 3, ...),
-             "loweralpha" (a, b, c, ..., z),
-             "upperalpha" (A, B, C, ..., Z),
-             "lowerroman" (i, ii, iii, iv, ..., mmmmcmxcix [4999]),
-             or "upperroman" (I, II, III, IV, ..., MMMMCMXCIX [4999]).
-
-             ``prefix`` stores the formatting characters used before the
-             enumerator.  In documents originating from reStructuredText_
-             data, it will contain either "" (empty string) or "(" (left
-             parenthesis).  It may or may not affect processing.
-
-             ``suffix`` stores the formatting characters used after the
-             enumerator.  In documents originating from reStructuredText_
-             data, it will contain either "." (period) or ")" (right
-             parenthesis). Depending on the capabilities of the output
-             format, this attribute may or may not affect processing.
-
-             ``start`` contains the ordinal value of the first item in
-             the list, in decimal.  For lists beginning at value 1
-             ("1", "a", "A", "i", or "I"), this attribute may be omitted.
-
-:Parameter Entities: The `%body.elements`_ parameter entity directly includes
+:Parameter Entities:
+             The `%body.elements`_ parameter entity directly includes
              <enumerated_list>.  The `%structure.model`_ parameter entity
              indirectly includes <enumerated_list>.
 
@@ -1814,14 +1708,8 @@ See `\<list_item>`_ for another example.
 <error>
 =======
 
-The <error> element is an *admonition*, a distinctive and
-self-contained notice. See also the generic `\<admonition>`_
-and the other specific admonition elements `\<attention>`_,
-`\<caution>`_, `\<danger>`_, `\<hint>`_, `\<important>`_,
-`\<note>`_, `\<tip>`_, and `\<warning>`_.
-
-Details
--------
+The <error> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <error> has no direct analogues in common DTDs.
@@ -1836,6 +1724,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity directly includes
              <error>.  The `%structure.model`_ parameter entity indirectly
              includes <error>.
+
+See also the generic `\<admonition>`_ and the other `specific admonition
+elements`_.
 
 Examples
 --------
@@ -1854,11 +1745,8 @@ Pseudo-XML_ fragment from simple parsing::
 <field>
 =======
 
-The <field> element contains a pair of `\<field_name>`_ and
-`\<field_body>`_ elements.
-
-Details
--------
+The <field> element contains one item of a `\<field_list>`_,
+a pair of `\<field_name>`_ and `\<field_body>`_ elements.
 
 :Category:   `Body Subelements`_
 :Analogues:  <field> has no direct analogues in common DTDs.
@@ -1881,11 +1769,7 @@ See the examples for the `\<field_list>`_ and `\<docinfo>`_ elements.
 <field_body>
 ============
 
-The <field_body> element contains body elements.
-It is analogous to a database field's data.
-
-Details
--------
+The <field_body> element is analogous to a database field's data.
 
 :Category:   `Body Subelements`_
 :Analogues:  <field_body> is analogous to the HTML <dd> element.
@@ -1903,13 +1787,7 @@ See the examples for the `\<field_list>`_ and `\<docinfo>`_ elements.
 ============
 
 The <field_list> element contains two-column table-like structures
-resembling database records (label & data pairs).  Field lists are
-often meant for further processing.
-In reStructuredText_, field lists are used to represent bibliographic
-fields (contents of the `\<docinfo>`_ element) and `directive`_ options.
-
-Details
--------
+resembling database records (label & data pairs).
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <field_list> is analogue to the HTML <dl> element.
@@ -1926,6 +1804,11 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <field_list>.  The `%structure.model`_
              parameter entity indirectly includes <field_list>.
+
+Field lists are often meant for further processing.
+In reStructuredText_, field lists are used to represent bibliographic
+fields (contents of the `\<docinfo>`_ element) and `directive`_ options.
+
 
 Examples
 --------
@@ -1969,11 +1852,7 @@ Pseudo-XML_ fragment from simple parsing::
 <field_name>
 ============
 
-The <field_name> element contains text; it is analogous to a
-database field's name.
-
-Details
--------
+The <field_name> element is analogous to a database field's name.
 
 :Category:   `Body Subelements`_ (simple)
 :Analogues:  <field_name> is analogous to the HTML <dt> element.
@@ -2001,13 +1880,6 @@ The <footer> element is a container element whose contents are meant
 to appear at the bottom of a web page, or repeated at the bottom of
 every printed page.
 
-The <footer> element may contain processing information (datestamp, a
-link to Docutils_, etc.) as well as custom content.
-
-
-Details
--------
-
 :Category:   `Decorative Elements`_
 :Analogues:  <footer> is analogous to the HTML5 <footer> element. There
              are no direct analogies to <footer> in HTML4 or DocBook.
@@ -2016,6 +1888,10 @@ Details
 :Parents:    Only the `\<decoration>`_ element contains <footer>.
 :Children:   <footer> elements may contain `body elements`_.
 :Attributes: The <footer> element contains only the `common attributes`_.
+
+The <footer> element may contain processing information (datestamp, a
+link to Docutils_, etc.) as well as custom content.
+
 
 Examples
 --------
@@ -2047,9 +1923,6 @@ The corresponding footnote mark in running text is set by the
 `\<footnote_reference>`_ element.
 
 .. _notes: https://en.wikipedia.org/wiki/Note_(typography)
-
-Details
--------
 
 :Category:   `Compound Body Elements`_
 
@@ -2120,9 +1993,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <footnote_reference> element is an inline element representing a
 cross reference to a `\<footnote>`_ (a footnote mark).
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  The <footnote_reference> element resembles
              the `DocBook \<footnoteref>`_ element or
@@ -2133,9 +2003,8 @@ Details
              `\<label>`_ of the referenced footnote. The mark is
              typically formatted as superscript or enclosed in square
              brackets.
-:Parents:    All elements employing the `%inline.elements`_
-             parameter entities in their content models may contain
-             <footnote-reference>.
+:Parents:    All elements employing the `%text.model`_ parameter entity
+             in their content models may contain <footnote-reference>.
 :Children:   <footnote_reference> elements contain text data only.
 :Attributes: The <footnote_reference> element contains the
              `common attributes`_ plus auto_, refid_, and refname_.
@@ -2188,11 +2057,7 @@ The <header> element is a container element whose contents are meant
 to appear at the top of a web page, or at the top of every printed
 page.
 
-Details
--------
-
 :Category:   `Decorative Elements`_
-
 :Analogues:  <header> is analogous to the HTML5 <header> element.
              There are no direct analogies to <header> in HTML4 or DocBook.
              Equivalents are typically constructed from primitives and/or
@@ -2220,14 +2085,8 @@ Pseudo-XML_ fragment from simple parsing::
 <hint>
 ======
 
-The <hint> element is an *admonition*, a distinctive and
-self-contained notice. See also the generic `\<admonition>`_
-and the other specific admonition elements `\<attention>`_,
-`\<caution>`_, `\<danger>`_, `\<error>`_, `\<important>`_,
-`\<note>`_, `\<tip>`_, and `\<warning>`_.
-
-Details
--------
+The <hint> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <hint> has no direct analogues in common DTDs.
@@ -2242,6 +2101,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <hint>.  The `%structure.model`_
              parameter entity indirectly includes <hint>.
+
+See also the generic `\<admonition>`_ and the other
+`specific admonition elements`_.
 
 Examples
 --------
@@ -2263,22 +2125,14 @@ Pseudo-XML_ fragment from simple parsing::
 The <image> element refers to an image resource that should be included
 in the document.
 
-It is up to the author to ensure compatibility of the image data format
-with the output format or user agent (LaTeX engine, HTML browser, ...).
-The `reStructuredText Directives` documentation contains a non exhaustive
-`table of compatible image formats`_.
-
-Details
--------
-
 :Categories: `Body Elements`_, `Inline Elements`_
 :Analogues:  <image> is analogous to the `HTML \<img>`_,
              `DocBook \<imagedata>`_, and `SVG \<image>`_ elements.
 :Processing: The specified image is included into the output document.
              Depending on the output format, this is done by referring to
-             the image URI or by embedding the image files content.
+             the image URI or by embedding the image data.
 :Parents:    All elements employing the `%body.elements`_,
-             `%inline.elements`_, or `%structure.model`_ parameter entities
+             `%text.model`_, or `%structure.model`_ parameter entities
              in their content models may contain <image>.
 :Children:   The <image> element has no content.
 :Attributes: The <image> element contains the `common attributes`_ plus
@@ -2286,7 +2140,12 @@ Details
 :Parameter Entities:
              The `%body.elements`_ and `%inline.elements`_ parameter
              entities directly include <image>.  The `%structure.model`_
-             parameter entity indirectly includes <image>.
+             and `%text.model`_ parameter entities indirectly include <image>.
+
+It is up to the author to ensure compatibility of the image data format
+with the output format or user agent (LaTeX engine, HTML browser, ...).
+The `reStructuredText Directives` documentation contains a non exhaustive
+`table of compatible image formats`_.
 
 Examples
 --------
@@ -2309,14 +2168,8 @@ Pseudo-XML_ fragment from simple parsing::
 <important>
 ===========
 
-The <important> element is an *admonition*, a distinctive and
-self-contained notice. See also the generic `\<admonition>`_
-and the other specific admonition elements `\<attention>`_,
-`\<caution>`_, `\<danger>`_, `\<error>`_, `\<hint>`_,
-`\<note>`_, `\<tip>`_, and `\<warning>`_.
-
-Details
--------
+The <important> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <important> is analogous to the `DocBook \<important>`_ element.
@@ -2330,6 +2183,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <important>.  The `%structure.model`_
              parameter entity indirectly includes <important>.
+
+See also the generic `\<admonition>`_ and the other
+`specific admonition elements`_.
 
 Examples
 --------
@@ -2362,9 +2218,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <inline> element is a generic inline container.
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <inline> is analogous to the HTML <span> element.
 :Processing: Writers_ typically pass the classes_ attribute to the output
@@ -2374,8 +2227,8 @@ Details
              render the content distinctly for specific class values.
              Moreover, writers may ignore the element and just render
              the content.
-:Parents:    All elements employing the `%inline.elements`_ parameter
-             entities in their content models may contain <inline>.
+:Parents:    All elements employing the `%text.model`_ parameter
+             entity in their content models may contain <inline>.
 :Children:   <inline> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
 :Attributes: The <inline> element contains only the `common attributes`_.
@@ -2418,9 +2271,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <line> element contains a single line of text,
 part of a `\<line_block>`_.
 
-Details
--------
-
 :Category:   `Body Subelements`_ (simple)
 :Analogues:  <line> has no direct analogues in common DTDs.
              It can be emulated with primitives or type effects.
@@ -2438,15 +2288,7 @@ See `\<line_block>`_.
 ============
 
 The <line_block> element contains a sequence of lines and nested line
-blocks.  Line breaks (implied between elements) and leading whitespace
-(indicated by nesting) is significant and must be preserved.
-
-<line_block> elements are commonly used for verse and addresses.
-See `\<literal_block>`_ for an alternative useful for
-program listings and interactive computer sessions.
-
-Details
--------
+blocks.
 
 :Category:   `Compound Body Elements`_
 
@@ -2454,10 +2296,10 @@ Details
              element and to the HTML <pre> element (with modifications to
              typeface styles).
 
-:Processing: Unlike <literal_block>, <line_block> elements are
+:Processing: Line breaks (implied between elements) and leading whitespace
+             (indicated by nesting) is significant and must be preserved.
+             Unlike <literal_block>, <line_block> elements are
              typically rendered in an ordinary text typeface.
-             It is crucial that leading whitespace and line breaks
-             are preserved in the rendered form.
 
 :Parents:    All elements employing the `%body.elements`_ or
              `%structure.model`_ parameter entities in their content models
@@ -2473,6 +2315,10 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <line_block>.  The `%structure.model`_
              parameter entity indirectly includes <line_block>.
+
+<line_block> elements are commonly used for verse and addresses.
+See `\<literal_block>`_ for an alternative useful for
+program listings and interactive computer sessions.
 
 Examples
 --------
@@ -2541,9 +2387,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <list_item> element is a container for the elements of a list
 item.
 
-Details
--------
-
 :Category:   `Body Subelements`_ (compound)
 :Analogues:  <list_item> is analogous to the HTML <li> element
              and to the DocBook_ <listitem> element.
@@ -2596,9 +2439,6 @@ See `\<bullet_list>`_ or `\<enumerated_list>`_ for further examples.
 
 The <literal_block> element contains a block of text where line
 breaks and whitespace are significant and must be preserved.
-<literal_block> elements are commonly used for program listings and
-interactive computer sessions.
-See `\<line_block>`_ for an alternative useful for verse and addresses.
 
 Details
 -------
@@ -2619,6 +2459,10 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <literal_block>.  The `%structure.model`_
              parameter entity indirectly includes <literal_block>.
+
+<literal_block> elements are commonly used for program listings and
+interactive computer sessions.
+See `\<line_block>`_ for an alternative useful for verse and addresses.
 
 Examples
 --------
@@ -2655,17 +2499,14 @@ the `"code" directive`_.
 The <math> element contains text in `LaTeX math format` [#latex-math]_
 that is typeset as mathematical notation (inline formula).
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <math> is analogous to a HTML/MathML <math> element or
              the LaTeX (``$ math $``) mode.
 :Processing: Rendered as mathematical notation.
              If the output format does not support math typesetting,
              the content may be inserted verbatim.
-:Parents:    All elements employing the `%inline.elements`_
-             parameter entities in their content models may contain <math>.
+:Parents:    All elements employing the `%text.model`_
+             parameter entitiy in their content models may contain <math>.
 :Children:   <math> elements contain text data only.
 :Attributes: The <math> element contains only the `common attributes`_.
 
@@ -2694,9 +2535,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <math_block> element contains a block of text in `LaTeX math format`
 [#latex-math]_ that is typeset as mathematical notation (display formula).
 
-Details
--------
-
 :Category:   `Simple Body Elements`_
 :Analogues:  <math_block> is analogous to a HTML/MathML <math> element
              displayed as block-level element or a LaTeX ``equation*``
@@ -2714,7 +2552,6 @@ Details
 
 Example
 -------
-
 
 The reStructuredText `"math" directive`_ generates a <math_block> element::
 
@@ -2735,13 +2572,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <meta> element is a container for "hidden" document
 bibliographic data, or meta-data (data about the document).
-It corresponds to the HTML <meta> element.
-
-See also the `\<docinfo>`_ element for displayed meta-data.
-The document's title_ attribute stores the metadata document title.
-
-Details
--------
 
 :Category:   `Structural Subelements`_
 
@@ -2761,6 +2591,9 @@ Details
              *content*, *http-equiv*, *lang*, *dir*, *media*, and
              *scheme* that correspond to the respective attributes
              of the `HTML <meta> element`_.
+
+See also the `\<docinfo>`_ element for displayed meta-data.
+The document's `title attribute`_ stores the metadata document title.
 
 Example
 -------
@@ -2783,14 +2616,8 @@ Pseudo-XML_ fragment from simple parsing::
 <note>
 ======
 
-The <note> element is an *admonition*, a distinctive and
-self-contained notice. See also the generic `\<admonition>`_
-and the other specific admonition elements `\<attention>`_,
-`\<caution>`_, `\<danger>`_, `\<error>`_, `\<hint>`_,
-`\<important>`_, `\<tip>`_, and `\<warning>`_.
-
-Details
--------
+The <note> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <note> is analogous to the `DocBook \<note>`_ element.
@@ -2804,6 +2631,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <note>.  The `%structure.model`_
              parameter entity indirectly includes <note>.
+
+See also the generic `\<admonition>`_ and the other
+`specific admonition elements`_.
 
 Examples
 --------
@@ -2825,11 +2655,7 @@ Pseudo-XML_ fragment from simple parsing::
 ========
 
 The <option> element groups an option string together with zero or
-more option argument placeholders.  Note that reStructuredText_
-currently supports only one argument per option.
-
-Details
--------
+more option argument placeholders.
 
 :Category:   `Body Subelements`_
 :Analogues:  <option> has no direct analogues in common DTDs.
@@ -2842,6 +2668,9 @@ Details
 
 :Attributes: The <option> element contains only the `common attributes`_.
 
+Note that reStructuredText_ currently supports only one argument per
+option.
+
 Examples
 --------
 See the examples for the `\<option_list>`_ element.
@@ -2852,9 +2681,6 @@ See the examples for the `\<option_list>`_ element.
 
 The <option_argument> element contains placeholder text for option
 arguments.
-
-Details
--------
 
 :Category:   `Body Subelements`_
 :Analogues:  <option_argument> has no direct analogues in common DTDs.
@@ -2880,9 +2706,6 @@ See the examples for the `\<option_list>`_ element.
 The <option_group> element groups together one or more `\<option>`_
 elements, all synonyms.
 
-Details
--------
-
 :Category:   `Body Subelements`_
 :Analogues:  <option_group> has no direct analogues in common DTDs.
 :Processing: Typically `\<option>`_ elements within an <option_group> are
@@ -2902,9 +2725,6 @@ See the examples for the `\<option_list>`_ element.
 
 Each <option_list> element contains a two-column list of command-line
 options and descriptions, documenting a program's options.
-
-Details
--------
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <option_list> has no direct analogues in common DTDs.
@@ -2970,10 +2790,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <option_list_item> element is a container for a pair of
 `\<option_group>`_ and `\<description>`_ elements.
 
-
-Details
--------
-
 :Category:   `Body Subelements`_
 :Analogues:  <option_list_item> has no direct analogues in common DTDs.
 :Processing: See `\<option_list>`_.
@@ -2992,9 +2808,6 @@ See the examples for the `\<option_list>`_ element.
 ===============
 
 The <option_string> element contains the text of a command-line option.
-
-Details
--------
 
 :Category:   `Body Subelements`_
 :Analogues:  <option_string> has no direct analogues in common DTDs.
@@ -3015,9 +2828,6 @@ See the examples for the `\<option_list>`_ element.
 
 The <organization> element contains the name of document author's
 organization, or the organization responsible for the document.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <organization> is analogous to the DocBook_ <orgname>,
@@ -3060,9 +2870,6 @@ context.
 
 The <paragraph> element contains the text and inline elements of a
 single paragraph, a fundamental building block of documents.
-
-Details
--------
 
 :Category:   `Simple Body Elements`_
 :Analogues:  <paragraph> is analogous to the HTML <p> element
@@ -3111,16 +2918,13 @@ Pseudo-XML_ fragment from simple parsing::
 The <raw> element contains non-reStructuredText data that is to be passed
 untouched to the Writer.
 
-Details
--------
-
 :Category:   `Simple Body Elements`_, `Inline Elements`_
 :Analogues:  The <raw> element has no direct analogues in common DTDs.
 :Processing: Passed untouched to the Writer_.
              The interpretation is up to the Writer.
              A Writer may ignore <raw> elements not matching its format_.
 :Parents:    All elements employing the `%body.elements`_,
-             `%inline.elements`_, or `%structure.model`_ parameter entities
+             `%structure.model`_, or `%text.model`_ parameter entities
              in their content models may contain <raw>.
 :Children:   <raw> elements contain text data only.
 :Attributes: The <raw> element contains the `common attributes`_
@@ -3128,7 +2932,7 @@ Details
 :Parameter Entities:
              The `%body.elements`_ and `%inline.elements`_ parameter
              entities directly include <raw>.  The `%structure.model`_
-             parameter entity indirectly  includes <raw>.
+             and `%text.model`_ parameter entities indirectly include <raw>.
 
 Examples
 --------
@@ -3159,9 +2963,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <revision> element contains the revision number of the document.
 It can be used alone or in conjunction with `\<version>`_.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <revision> is analogous to but simpler than the DocBook_
@@ -3208,9 +3009,6 @@ context.
 
 The <row> element represents one row of a `\<table>`_.
 
-Details
--------
-
 :Category:   `Body Subelements`_
 :Analogues:  <row> is defined in the `XML Exchange Table Model DTD`_.
              [#extblx]_  It is analogous to the HTML_ <tr> element
@@ -3249,32 +3047,20 @@ document's structure.
 
 The <section> element is the main unit of hierarchy for Docutils documents.
 
-The Docutils document model uses a simple, recursive model for section
-structure.  A `\<document>`_ node may contain <section> elements.
-Sections in turn may contain other <section> elements, without limit.
-The level (depth) of a section element is determined from its physical
-nesting level.
-
-Paragraphs and other body elements may occur before a <section>,
-but not after it.
-
-Details
--------
-
 :Category:   `Structural Elements`_
 
-:Analogues:  <section> is analogous to the section elements in DocBook and
-             HTML. Unlike ``<h1>`` … ``<h6>`` in HTML_, ``<sect1>`` …
-             ``<sect5>`` in DocBook_, or ``<div1>`` … in XMLSpec_, the
-             level is not incorporated into the element name.
+:Analogues:  <section> is analogous to the section elements in DocBook_ and
+             HTML_. However, unlike ``<h1>`` … ``<h6>`` in HTML_ and
+             ``<sect1>`` … ``<sect5>`` in DocBook_, the level is not
+             incorporated into the element name.
 
 :Parents:    The following elements may contain <section>:
              `\<document>`_, `\<section>`_
 
 :Children:   <section> elements begin with a `\<title>`_,
              followed by an optional `\<subtitle>`_.
-             They may contain `body elements`_ as well as
-             `\<transition>`_, `\<topic>`_, and `\<sidebar>`_ elements:
+             They may contain `structural elements`_, `body elements`_,
+             and `\<transition>`_ elements:
 
              .. parsed-literal::
 
@@ -3285,6 +3071,16 @@ Details
 :Parameter Entities: The `%section.elements`_ parameter entity
              directly includes <section>.  The `%structure.model`_
              parameter entity indirectly includes <section>.
+
+The Docutils document model uses a simple, recursive model for section
+structure.  A `\<document>`_ node may contain <section> elements.
+Sections in turn may contain other <section> elements, without limit.
+The level (depth) of a section element is determined from its physical
+nesting level.
+
+Paragraphs and other body elements may occur before a <section>,
+but not after it.
+
 
 Examples
 --------
@@ -3339,20 +3135,7 @@ Complete pseudo-XML_ result after parsing::
 
 Sidebars are like miniature, parallel documents that occur inside other
 documents, providing related or reference material.
-A <sidebar> is typically offset by a border and "floats" to the side of
-the page; the document's main text may flow around it.  Sidebars can also
-be likened to super-footnotes; their content is outside of the flow of
-the document's main text.
-
-The <sidebar> element is a non-recursive `\<section>`_-like construct
-which may occur at the top level of a `\<section>`_ wherever a body
-element (list, table, etc.) is allowed.  In other words, <sidebar>
-elements cannot nest inside body elements, so you can't have a <sidebar>
-inside a ``table`` or a ``list``, or inside another <sidebar> or
-`\<topic>`_.
-
-Details
--------
+Their content is outside of the flow of the document's main text.
 
 :Category:   `Structural Elements`_
 
@@ -3379,6 +3162,11 @@ Details
 
 :Parameter Entities: The `%structure.model`_ parameter entity
              directly includes <sidebar>.
+
+The <sidebar> element is a non-recursive `\<section>`_-like construct.
+<sidebar> elements cannot nest inside body elements, so you can't have a
+<sidebar> inside a `\<table>`_ or a list, or inside another <sidebar>
+or `\<topic>`_.
 
 
 Examples
@@ -3407,9 +3195,6 @@ Pseudo-XML_ fragment from simple parsing::
 
 The <status> element contains a status statement for the document,
 such as "Draft", "Final", "Work In Progress", etc.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <status> is analogous to the DocBook_ <status> element.
@@ -3449,15 +3234,12 @@ context.
 ========
 
 The <strong> element is an inline element representing
-text that has strong importance, seriousness, or urgency.
-
-Details
--------
+text that has **strong importance**, **seriousness**, or **urgency**.
 
 :Category:   `Inline Elements`_
 :Analogues:  <strong> is analogous to the HTML_ <strong> element.
 :Processing: Typically displayed in boldface.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <strong>.
 :Children:   <strong> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
@@ -3489,14 +3271,11 @@ Pseudo-XML_ fragment from simple parsing::
 The <subscript> element is an inline element representing text which
 should be displayed as subscript.
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <subscript> is analogous to the HTML_ <sub> element
              and the DocBook_ <subscript> element.
 :Processing: Typically rendered with a lowered baseline using smaller text.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <subscript>.
 :Children:   <subscript> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
@@ -3537,10 +3316,7 @@ reStructuredText `substitution definition`_.
 ==========
 
 The <subtitle> element stores the subtitle of a `\<document>`_,
-`\<section>`, or `\<sidebar>`.
-
-Details
--------
+`\<section>`_, or `\<sidebar>`_.
 
 :Category:   `Structural Subelements`_
 :Analogues:  <subtitle> is analogous to the DocBook_ <subtitle> element.
@@ -3595,14 +3371,11 @@ attributes are stored in the <subtitle> element.
 The <superscript> element is an inline element representing text which
 should be displayed as superscript.
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <superscript> is analogous to the HTML_ <sup> element
              and the DocBook_ <superscript> element.
 :Processing: Typically rendered with a raised baseline using smaller text.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <superscript>.
 :Children:   <superscript> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
@@ -3634,9 +3407,6 @@ Pseudo-XML_ fragment from simple parsing::
 =======
 
 The <table> element represents a data arrangement with rows and columns.
-
-Details
--------
 
 :Category:   `Body Elements`_
 
@@ -3716,9 +3486,6 @@ Pseudo-XML_ fragment from simple parsing::
 The <tbody> element identifies the rows that form the *body*
 of a `\<table>`_ (as distinct from the header rows).
 
-Details
--------
-
 :Category:   `Body Subelements`_
 :Analogues:  <tbody> is defined in the `XML Exchange Table Model DTD`_.
              [#extblx]_  It is analogous to the HTML_ <tbody> and
@@ -3742,9 +3509,6 @@ See `\<table>`_.
 The <term> element contains a word or phrase being defined in a
 `\<definition_list>`_.
 
-Details
--------
-
 :Category:   `Body Subelements`_ (simple)
 :Analogues:  <term> is analogous to the HTML <dt> element
              and to the DocBook_ <term> element.
@@ -3764,16 +3528,13 @@ See the examples for the `\<definition_list>`_,
 ========
 
 The <tgroup> element identifies a logically complete portion of a
-`\<table>`_. [#]_
-
-Details
--------
+`\<table>`_.
 
 :Category:   `Body Subelements`_
 :Analogues:  <tgroup> is defined in the `XML Exchange Table Model DTD`_.
              [#extblx]_  It is analogous to the DocBook_ <tgroup> element.
-             There is no corresponding HTML element, the <colgroup>
-             element has a different semantics.
+             There is no corresponding HTML element (the <colgroup>
+             element has a different purpose and semantics).
 :Processing: See the `Exchange Table Model`_.
 :Parents:    Only the `\<table>`_ element contains <tgroup>.
 :Children:   <tgroup> elements contain one or more `\<colspec>`_
@@ -3786,15 +3547,15 @@ Details
              Via the `%tbl.tgroup.att`_ parameter entity, <tgroup>
              supports the `common attributes`_.
 
+Tables usually consist of a single <tgroup>. Complex tables with widely
+varying column specifications may be easier to code using multiple
+<tgroup>s. However, this is not supported by `table markup in
+reStructuredText <rST tables_>`__ and Docutils table handling routines.
+
 Examples
 --------
 
 See `\<table>`_.
-
-.. [#] Tables usually consist of a single <tgroup>. Complex tables with
-   widely varying column specifications may be easier to code using
-   multiple <tgroup>s. However, this is not supported by `table markup in
-   reStructuredText <rST tables_>`__ and Docutils table handling routines.
 
 
 <thead>
@@ -3802,9 +3563,6 @@ See `\<table>`_.
 
 The <thead> element identifies the row(s) that form the head of
 a `\<table>`_ (as distinct from the body rows).
-
-Details
--------
 
 :Category:   `Body Subelements`_
 :Analogues:  <thead> is defined in the `XML Exchange Table Model DTD`_.
@@ -3830,13 +3588,8 @@ See `\<table>`_.
 <tip>
 =====
 
-The <tip> element is an *admonition*, a distinctive and self-contained notice.
-See also the generic `\<admonition>`_ and the other specific admonition
-elements `\<attention>`_, `\<caution>`_, `\<danger>`_,
-`\<error>`_, `\<hint>`_, `\<note>`_, and `\<warning>`_.
-
-Details
--------
+The <tip> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <tip> is analogous to the `DocBook \<tip>`_ element.
@@ -3850,6 +3603,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <tip>. The `%structure.model`_
              parameter entity indirectly includes <tip>.
+
+See also the generic `\<admonition>`_ and the other `specific admonition
+elements`_.
 
 Examples
 --------
@@ -3872,12 +3628,6 @@ The <title> element stores the title of a `\<document>`_, `structural
 elements`_, or a generic `\<admonition>`_.  It is also used for the
 caption of a `\<table>`_.
 
-The <title> of a <document> may differ from its *metadata title*
-stored in the `title attribute`_.
-
-Details
--------
-
 :Category:   `Structural Subelements`_, `Body Subelements`_
 :Analogues:  <title> is analogous to the DocBook_ <title> element and
              the HTML_ header elements (<h1> etc.) while the HTML <title>
@@ -3893,6 +3643,9 @@ Details
              plus refid_ (used as a backlink to a table of contents entry)
              and auto_.
 
+The <title> of a document may differ from its *metadata title*
+stored in the `title attribute`_.
+
 Examples
 --------
 
@@ -3904,8 +3657,8 @@ underlines and matching overlines)::
 
     A paragraph.
 
-    The next section's title
-    ========================
+    Next section's title
+    ====================
 
 Pseudo-XML_ fragment from simple parsing::
 
@@ -3914,9 +3667,9 @@ Pseudo-XML_ fragment from simple parsing::
             A Title
         <paragraph>
             A paragraph.
-    <section ids="the-next-section-s-title" names="the\ next\ section's\ title">
+    <section ids="next-section-s-title" names="next\ section's\ title">
         <title>
-            The next section’s title
+            Next section’s title
 
 See also the examples for `\<admonition>`_, `\<document>`_,
 `\<section>`_, `\<sidebar>`_, `\<subtitle>`_, `\<table>`_,
@@ -3929,18 +3682,16 @@ and `\<topic>`_.
 The <title_reference> element is an inline element representing
 the titles of a cited creative work.
 
-Details
--------
-
 :Category:   `Inline Elements`_
 :Analogues:  <title_reference> is analogous to the HTML_ <cite> element
              and the DocBook_ <citetitle> element.
 :Processing: Typically displayed in italic type.
-:Parents:    All elements employing the `%inline.elements`_ parameter
+:Parents:    All elements employing the `%text.model`_ parameter
              entity in their content models may contain <title_reference>.
 :Children:   <title_reference> elements may contain text data
              plus `inline elements`_ (`%text.model`_).
-:Attributes: The <title_reference> element contains only the `common attributes`_.
+:Attributes: The <title_reference> element contains only the
+             `common attributes`_.
 
 Examples
 --------
@@ -3963,25 +3714,18 @@ Pseudo-XML_ fragment from simple parsing::
 <topic>
 =======
 
-The <topic> element is a non-recursive section-like construct which may
-occur at the top level of a `\<document>`_, `\<section>`_, or `\<sidebar>`_
-wherever a body element (list, table, etc.) is allowed.  In other words,
-<topic> elements cannot nest inside body elements. You may use a
-`\<rubric>`_ element to get an informal heading inside a <table>
-or a <list>, or inside another <topic>.
-
-Docutils uses the <topic> element also for a generated `table of contents`_,
-and the "abstract" and "dedication" `bibliographic fields`_.
-
-Details
--------
+The <topic> element is a non-recursive section-like construct for content
+that is separate from the flow of the document.
+Topics do not appear in the table of contents.
 
 :Category:   `Structural Elements`_
 
-:Analogues:  <topic> is analogous to the DocBook_ <simplesect> element.
+:Analogues:  <topic> is analogous to the DocBook_ <simplesect> element
+             and the HTML_ <aside> element.
 
 :Processing: A <topic> element should be set off from the rest of the
              document somehow, such as with indentation or a border.
+             In contrast to a `\<sidebar>`_, it should not float.
 
 :Parents:    The following elements may contain <topic>:
              `\<document>`_, `\<section>`_, `\<sidebar>`_
@@ -3991,11 +3735,21 @@ Details
 
                  (title?, (%body.elements;)+)
 
-:Attributes: The <topic> element contains the `common attributes`_ plus
+:Attributes: The <topic> element accepts the `common attributes`_ plus
              depth_ and local_.
 
 :Parameter Entities: The `%structure.model`_ parameter entity
              directly includes <topic>.
+
+Docutils uses the <topic> element also for a generated `table of contents`_,
+and the "abstract" and "dedication" `bibliographic fields`_.
+
+<topic> elements may occur anywhere a `\<section>`_ or `\<transition>`_
+may occur.  They cannot nest inside body elements.
+
+.. Tip:: Use a `\<rubric>`_ element to get an informal heading inside a
+         table, list, or inside another <topic>.
+
 
 Examples
 --------
@@ -4018,27 +3772,8 @@ Pseudo-XML_ fragment from simple parsing::
 <transition>
 ============
 
-The <transition> element is commonly seen in novels and short
-fiction, as a gap spanning one or more lines, with or without a type
-ornament such as a row of asterisks.
-
-Transitions separate body elements and sections, dividing a section into
-untitled divisions.  A transition may not begin or end a section [#]_ or
-document, nor may two transitions be immediately adjacent.
-
-See also `Doctree Representation of Transitions`__ in
-`A Record of reStructuredText Syntax Alternatives`__.
-
-.. [#] In reStructuredText markup, a transition may appear to fall at
-   the end of a section immediately before another section.  A
-   transform recognizes this case and moves the transition so it
-   separates the sections.
-
-__ ../dev/rst/alternatives.html#doctree-representation-of-transitions
-__ ../dev/rst/alternatives.html
-
-Details
--------
+The <transition> element separates body elements and sections, dividing a
+`\<section>`_ into untitled divisions.
 
 :Category:   `Structural Subelements`_
 :Analogues:  <transition> is analogous to the HTML <hr> element.
@@ -4053,6 +3788,21 @@ Details
 :Attributes: The <transition> element contains only the `common attributes`_.
 :Parameter Entities: The `%structure.model`_ parameter entity
              directly includes <transition>.
+
+A transition may not begin or end a section [#]_ or document, nor may two
+transitions be immediately adjacent.
+
+See also `Doctree Representation of Transitions`__ in
+`A Record of reStructuredText Syntax Alternatives`__.
+
+.. [#] In reStructuredText markup, a transition may appear to fall at
+   the end of a section immediately before another section.  A
+   transform recognizes this case and moves the transition so it
+   separates the sections.
+
+__ ../dev/rst/alternatives.html#doctree-representation-of-transitions
+__ ../dev/rst/alternatives.html
+
 
 Examples
 --------
@@ -4080,9 +3830,6 @@ Complete pseudo-XML_ result after parsing::
 
 The <version> element contains the version number of the document.
 It can be used alone or in conjunction with `\<revision>`_.
-
-Details
--------
 
 :Category:   `Bibliographic Elements`_
 :Analogues:  <version> may be considered analogous to the DocBook_
@@ -4123,14 +3870,8 @@ context.
 <warning>
 =========
 
-The <warning> element is an *admonition*, a distinctive and
-self-contained notice.  See also the generic `\<admonition>`_
-and the other specific admonition elements `\<attention>`_,
-`\<caution>`_, `\<danger>`_, `\<error>`_, `\<hint>`_,
-`\<important>`_, `\<note>`_, and `\<tip>`_.
-
-Details
--------
+The <warning> element is a specific *admonition*, a distinctive and
+self-contained notice.
 
 :Category:   `Compound Body Elements`_
 :Analogues:  <warning> is analogous to the `DocBook \<warning>`_ element.
@@ -4144,6 +3885,9 @@ Details
 :Parameter Entities: The `%body.elements`_ parameter entity
              directly includes <warning>.  The `%structure.model`_
              parameter entity indirectly includes <warning>.
+
+See also the generic `\<admonition>`_ and the other
+`specific admonition elements`_.
 
 Examples
 --------
@@ -4163,8 +3907,14 @@ Pseudo-XML_ fragment from simple parsing::
 Attribute Types
 ---------------
 
-*Standard attribute types* are defined in the `attribute types
-<XML attribute types_>`__ section of the `XML 1.0 specification`_.
+.. contents:: :local:
+
+Standard Attribute Types
+========================
+
+*Standard attribute types* are defined in the
+`attribute types <XML attribute types_>`__ section
+of the `XML 1.0 specification` [xml1.0]_.
 
 _`CDATA`
     Character data.  CDATA attributes may contain arbitrary text.
@@ -4179,7 +3929,9 @@ _`NMTOKENS`
 _`EnumeratedType`
     The attribute value may be one of a specified list of values.
 
-.. _custom attribute types:
+
+Custom Attribute Types
+======================
 
 The Docutils DTD defines *custom attribute types* via `parameter entities
 <parameter entity reference_>`__ that resolve to standard attribute types
@@ -4237,13 +3989,12 @@ _`%yesorno`
     and `stub`_ attributes.
     Python data type: ``int``.
 
-.. _XML 1.0 specification: https://www.w3.org/TR/REC-xml
-.. _XML attribute types: https://www.w3.org/TR/REC-xml/#sec-attribute-types
-.. _One ID per Element Type: https://www.w3.org/TR/REC-xml/#one-id-per-el
-
 
 Names and identifiers
 =====================
+
+The following names and identifiers are used in the
+`custom attribute types`_.
 
 .. class:: description
 
@@ -4315,9 +4066,8 @@ __ https://help.libreoffice.org/6.3/en-US/text/swriter/01/04040000.html
 __ `XML attribute types`_
 
 
------------------
 Common Attributes
------------------
+=================
 
 Through the `%basic.atts`_ parameter entity, all elements support the
 following attributes: ids_, names_ or dupnames_, source_, and classes_.
@@ -4563,7 +4313,17 @@ has been a naming conflict.
 Attribute type: EnumeratedType_, one of "arabic", "loweralpha",
 "upperalpha", "lowerroman", or "upperroman".  Default value: none.
 
-The ``enumtype`` attribute is used in the `\<enumerated_list>`_ element.
+The ``enumtype`` attribute is used in the `\<enumerated_list>`_ element
+to record the intended enumeration sequence.
+
+Supported values:
+    .. class:: field-indent-8em
+
+    :arabic:     1, 2, 3, ...
+    :loweralpha: a, b, c, ..., z
+    :upperalpha: A, B, C, ..., Z
+    :lowerroman: i, ii, iii, iv, ..., mmmmcmxcix [4999]
+    :upperroman: I, II, III, IV, ..., MMMMCMXCIX [4999]
 
 
 ``format``
@@ -4776,7 +4536,12 @@ ignored by Docutils.
 
 Attribute type: `CDATA`_.  Default value: none.
 
-The ``prefix`` attribute is used in the `\<enumerated_list>`_ element.
+The ``prefix`` attribute is used in the `\<enumerated_list>`_ element
+to store the formatting characters used before the enumerator.
+
+In documents originating from reStructuredText_ data, it will contain
+either "" (empty string) or "(" (left parenthesis).
+Writers may ignore this attribute.
 
 
 ``refid``
@@ -4859,16 +4624,26 @@ a uniform scaling factor (integer percentage value).
 Attribute type: `CDATA`_.  Default value: none.
 
 The ``source`` attribute is used to store the path or URL to the
-source text that was used to produce the document tree.  It is one of
-the `common attributes`_, declared for all Docutils elements.
+source text that was used to produce the document tree.
+
+It is one of the `common attributes`_, declared for all Docutils
+elements but typically only used on the `root element`_.
+
+.. note:: All ``docutils.nodes.Node`` instances also support an
+   **internal** ``source`` attribute that is used when reporting
+   processing problems.
 
 
 ``start``
 =========
 
-Attribute type: `%number`_.  Default value: none.
+Attribute type: `%number`_.  Default value: none (implies 1).
 
-The ``start`` attribute is used in the `\<enumerated_list>`_ element.
+The ``start`` attribute is used in the `\<enumerated_list>`_ element to
+store the ordinal value of the first item in the list, in decimal.
+
+For lists beginning at value 1 ("1", "a", "A", "i", or "I"),
+this attribute may be omitted.
 
 
 ``stub``
@@ -4889,7 +4664,13 @@ entity extending the `Exchange Table Model`_.
 
 Attribute type: `CDATA`_.  Default value: none.
 
-The ``suffix`` attribute is used in the `\<enumerated_list>`_ element.
+The ``suffix`` attribute is used in the `\<enumerated_list>`_ element
+to store the formatting characters used after the enumerator.
+
+In documents originating from reStructuredText_ data, it will contain
+either "." (period) or ")" (right parenthesis). Depending on the
+capabilities of the output format, this attribute may or may not affect
+processing.
 
 
 .. _title attribute:
@@ -5290,17 +5071,8 @@ The ``%inline.elements`` parameter entity contains an OR-list of all
 The ``%additional.inline.elements`` parameter entity can be used by
 wrapper DTDs to extend ``%inline.elements``.
 
-Via `%text.model`_, the ``%inline.elements`` parameter entity is
-indirectly employed in the content models of the following elements:
-`\<abbreviation>`_, `\<acronym>`_, `\<address>`_, `\<attribution>`_,
-`\<author>`_, `\<caption>`_, `\<classifier>`_, `\<contact>`_,
-`\<copyright>`_, `\<date>`_, `\<doctest_block>`_, `\<emphasis>`_,
-`\<generated>`_, `\<inline>`_, `\<line_block>`_, `\<literal_block>`_,
-`\<organization>`_, `\<paragraph>`_, `\<problematic>`_,
-`\<reference>`_, `\<revision>`_, `\<rubric>`_,
-`\<status>`_, `\<strong>`_, `\<subscript>`_, `\<substitution_definition>`_,
-`\<substitution_reference>`_, `\<subtitle>`_, `\<superscript>`_,
-`\<target>`_, `\<term>`_, `\<title>`_, `\<title_reference>`_, `\<version>`_
+The ``%inline.elements`` parameter entity is employed in the
+`%text.model`_ parameter entity.
 
 
 ``%section.elements``
@@ -5437,10 +5209,10 @@ models of the following elements: `\<abbreviation>`_,
 Bibliography
 ------------
 
-.. _Exchange Table Model:
-.. _XML Exchange Table Model DTD:
+.. [tm9901]     .. _XML Exchange Table Model DTD:
+                .. _Exchange Table Model:
 
-.. [tm9901]     `XML Exchange Table Model DTD`,
+                `XML Exchange Table Model DTD`,
                 OASIS Technical Memorandum 9901:1999,
                 http://www.oasis-open.org/html/tm9901.html.
 
@@ -5456,7 +5228,6 @@ Bibliography
 .. [xml1.0]    `Extensible Markup Language (XML) 1.0`,
                 W3C Recommendation,
                 https://www.w3.org/TR/xml/.
-
 
 .. _DocBook: https://tdg.docbook.org/tdg/5.1/.
 .. _DocBook <caution>: https://tdg.docbook.org/tdg/5.1/caution.html
@@ -5477,6 +5248,9 @@ Bibliography
     http://xml.coverpages.org/xmlIntro.html
 .. _XMLSpec: https://www.w3.org/XML/1998/06/xmlspec-report.htm
 .. _external DTD subset: https://www.w3.org/TR/xml11/#dt-doctype
+.. _XML attribute types: https://www.w3.org/TR/REC-xml/#sec-attribute-types
+.. _One ID per Element Type: https://www.w3.org/TR/REC-xml/#one-id-per-el
+
 
 .. _Docutils: https://docutils.sourceforge.io/.
 .. _reStructuredText: https://docutils.sourceforge.io/rst.html
@@ -5496,7 +5270,7 @@ Bibliography
 .. _transform:
 .. _transforms:         ../api/transforms.html
 .. _DocInfo transform:  ../api/transforms.html#docinfo
-.. _DocTitle transform: ../api/transforms.html#frontmatter-doctitle
+.. _DocTitle transform: ../api/transforms.html#doctitle
 
 .. _A ReStructuredText Primer: ../user/rst/quickstart.html
 .. _reStructuredText Markup Specification: rst/restructuredtext.html
@@ -5579,8 +5353,8 @@ Bibliography
 .. _table of compatible image formats: rst/directives.html#image-formats
 
 
-
-..
+.. Emacs settings
+
    Local Variables:
    mode: indented-text
    indent-tabs-mode: nil
