@@ -25,8 +25,8 @@ __docformat__ = 'reStructuredText'
 from collections import Counter
 import re
 import sys
-import warnings
 import unicodedata
+import warnings
 # import xml.dom.minidom as dom # -> conditional import in Node.asdom()
 #                                    and document.asdom()
 
@@ -215,18 +215,6 @@ class Node:
         for child in self.children:
             yield from child._superfast_findall()
 
-    def traverse(self, condition=None, include_self=True, descend=True,
-                 siblings=False, ascend=False):
-        """Return list of nodes following `self`.
-
-        For looping, Node.findall() is faster and more memory efficient.
-        """
-        # traverse() may be eventually removed:
-        warnings.warn('nodes.Node.traverse() is obsoleted by Node.findall().',
-                      PendingDeprecationWarning, stacklevel=2)
-        return list(self.findall(condition, include_self, descend,
-                                 siblings, ascend))
-
     def findall(self, condition=None, include_self=True, descend=True,
                 siblings=False, ascend=False):
         """
@@ -310,6 +298,18 @@ class Node:
                 else:
                     node = node.parent
 
+    def traverse(self, condition=None, include_self=True, descend=True,
+                 siblings=False, ascend=False):
+        """Return list of nodes following `self`.
+
+        For looping, Node.findall() is faster and more memory efficient.
+        """
+        # traverse() may be eventually removed:
+        warnings.warn('nodes.Node.traverse() is obsoleted by Node.findall().',
+                      PendingDeprecationWarning, stacklevel=2)
+        return list(self.findall(condition, include_self, descend,
+                                 siblings, ascend))
+
     def next_node(self, condition=None, include_self=False, descend=True,
                   siblings=False, ascend=False):
         """
@@ -326,23 +326,7 @@ class Node:
             return None
 
 
-# definition moved here from `utils` to avoid circular import dependency
-def unescape(text, restore_backslashes=False, respect_whitespace=False):
-    """
-    Return a string with nulls removed or restored to backslashes.
-    Backslash-escaped spaces are also removed.
-    """
-    # `respect_whitespace` is ignored (since introduction 2016-12-16)
-    if restore_backslashes:
-        return text.replace('\x00', '\\')
-    else:
-        for sep in ['\x00 ', '\x00\n', '\x00']:
-            text = ''.join(text.split(sep))
-        return text
-
-
 class Text(Node, str):
-
     """
     Instances are terminal nodes (leaves) containing text only; no child
     nodes or attributes.  Initialize by passing a string to the constructor.
@@ -377,11 +361,11 @@ class Text(Node, str):
     def __repr__(self):
         return self.shortrepr(maxlen=68)
 
-    def _dom_node(self, domroot):
-        return domroot.createTextNode(str(self))
-
     def astext(self):
         return str(unescape(self))
+
+    def _dom_node(self, domroot):
+        return domroot.createTextNode(str(self))
 
     def copy(self):
         return self.__class__(str(self))
@@ -414,9 +398,11 @@ class Text(Node, str):
     def lstrip(self, chars=None):
         return self.__class__(str.lstrip(self, chars))
 
+    def validate(self):
+        pass  # Text nodes have no attributes and no children.
+
 
 class Element(Node):
-
     """
     `Element` is the superclass to all specific elements.
 
@@ -464,27 +450,40 @@ class Element(Node):
     This is equivalent to ``element.extend([node1, node2])``.
     """
 
-    basic_attributes = ('ids', 'classes', 'names', 'dupnames')
-    """Tuple of attributes which are defined for every Element-derived class
-    instance and can be safely transferred to a different node."""
+    list_attributes = ('ids', 'classes', 'names', 'dupnames')
+    """Tuple of attributes that are initialized to empty lists.
+
+    NOTE: Derived classes should update this value when supporting
+          additional list attributes.
+    """
+
+    valid_attributes = list_attributes + ('source',)
+    """Tuple of attributes that are valid for elements of this class.
+
+    NOTE: Derived classes should update this value when supporting
+          additional attributes.
+    """
+
+    common_attributes = valid_attributes
+    """Tuple of `common attributes`__  known to all Doctree Element classes.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#common-attributes
+    """
+
+    known_attributes = common_attributes
+    """Alias for `common_attributes`. Will be removed in Docutils 2.0."""
+
+    basic_attributes = list_attributes
+    """Common list attributes. Deprecated. Will be removed in Docutils 2.0."""
 
     local_attributes = ('backrefs',)
-    """Tuple of class-specific attributes that should not be copied with the
-    standard attributes when replacing a node.
-
-    NOTE: Derived classes should override this value to prevent any of its
-    attributes being copied by adding to the value in its parent class."""
-
-    list_attributes = basic_attributes + local_attributes
-    """Tuple of attributes that are automatically initialized to empty lists
-    for all nodes."""
-
-    known_attributes = list_attributes + ('source',)
-    """Tuple of attributes that are known to the Element base class."""
+    """Obsolete. Will be removed in Docutils 2.0."""
 
     tagname = None
-    """The element generic identifier. If None, it is set as an instance
-    attribute to the name of the class."""
+    """The element generic identifier.
+
+    If None, it is set as an instance attribute to the name of the class.
+    """
 
     child_text_separator = '\n\n'
     """Separator for child nodes, used by `astext()` method."""
@@ -492,6 +491,8 @@ class Element(Node):
     def __init__(self, rawsource='', *children, **attributes):
         self.rawsource = rawsource
         """The raw text from which this element was constructed.
+
+        For informative and debugging purposes. Don't rely on its value!
 
         NOTE: some elements do not set this value (default '').
         """
@@ -509,9 +510,9 @@ class Element(Node):
             self.attributes[att] = []
 
         for att, value in attributes.items():
-            att = att.lower()
+            att = att.lower()  # normalize attribute name
             if att in self.list_attributes:
-                # mutable list; make a copy for this node
+                # lists are mutable; make a copy for this node
                 self.attributes[att] = value[:]
             else:
                 self.attributes[att] = value
@@ -730,6 +731,8 @@ class Element(Node):
         """
         Update basic attributes ('ids', 'names', 'classes',
         'dupnames', but not 'source') from node or dictionary `dict_`.
+
+        Provisional.
         """
         if isinstance(dict_, Node):
             dict_ = dict_.attributes
@@ -968,6 +971,8 @@ class Element(Node):
         """
         Replace `self` node with `new`, where `new` is a node or a
         list of nodes.
+
+        Provisional: the handling of node attributes will be revised.
         """
         update = new
         if not isinstance(new, Node):
@@ -1081,14 +1086,149 @@ class Element(Node):
     @classmethod
     def is_not_known_attribute(cls, attr):
         """
-        Returns True if and only if the given attribute is NOT recognized by
-        this class.
+        Return True if `attr` is NOT defined for all Element instances.
+
+        Provisional. May be removed in Docutils 2.0.
         """
-        return attr not in cls.known_attributes
+        return attr not in cls.common_attributes
+
+    def validate_attributes(self):
+        # check for undeclared attributes
+        # TODO: check attribute values
+        for key, value in self.attributes.items():
+            if key.startswith('internal:'):
+                continue  # see docs/user/config.html#expose-internals
+            if key not in self.valid_attributes:
+                raise ValueError(
+                    f'Element <{self.tagname}> has invalid attribute "{key}".')
+
+    def validate(self):
+        # print(f'validating', self.tagname)
+        self.validate_attributes()
+        # TODO: check number of children
+        for child in self.children:
+            # TODO: check whether child has allowed type
+            child.validate()
+
+
+# ========
+#  Mixins
+# ========
+
+class Resolvable:
+    resolved = False
+
+
+class BackLinkable:
+    """Mixin for Elements that accept a "backrefs" attribute."""
+
+    list_attributes = Element.list_attributes + ('backrefs',)
+    valid_attributes = Element.valid_attributes + ('backrefs',)
+
+    def add_backref(self, refid):
+        self['backrefs'].append(refid)
+
+
+# ====================
+#  Element Categories
+# ====================
+
+class Root:
+    """Element at the root of a document tree."""
+
+
+class Titular:
+    """Headings (title, subtitle, rubric)."""
+
+
+class PreBibliographic:
+    """Elements which may occur before Bibliographic Elements."""
+
+
+class Invisible(PreBibliographic):
+    """Internal elements that don't appear in output."""
+
+
+class Bibliographic:
+    """Bibliographic Elements (`docinfo` children)."""
+
+
+class Decorative(PreBibliographic):
+    """`Decorative elements`__ (`header` and `footer`).
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html
+       #decorative-elements
+    """
+
+
+class Structural:
+    """`Structural Elements`__ that do not directly contain text data.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html
+       #structural-elements
+    """
+
+
+class SubStructural:
+    """`Structural Subelements`__ are valid children of Structural Elements.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html
+       #structural-subelements
+    """
+
+
+class Body:
+    """`Body elements`__.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#body-elements
+    """
+
+
+class General(Body):
+    """Miscellaneous body elements."""
+
+
+class Sequential(Body):
+    """List-like body elements."""
+
+
+class Admonition(Body):
+    """Admonitions (distinctive and self-contained notices)."""
+
+
+class Special(Body):
+    """Special internal body elements."""
+
+
+class Part:
+    """`Body Subelements`__.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#body-subelements
+    """
+
+
+class Inline:
+    """Inline elements."""
+
+
+class Referential(Resolvable):
+    """Elements holding a cross-reference (outgoing hyperlink)."""
+
+
+class Targetable(Resolvable):
+    """Cross-reference targets (incoming hyperlink)."""
+    referenced = 0
+
+    indirect_reference_name = None
+    """Holds the whitespace_normalized_name (contains mixed case) of a target.
+    Required for MoinMoin/reST compatibility."""
+
+
+class Labeled:
+    """Contains a `label` as its first element."""
 
 
 class TextElement(Element):
-
     """
     An element which directly contains text.
 
@@ -1115,8 +1255,9 @@ class TextElement(Element):
 
 
 class FixedTextElement(TextElement):
-
     """An element which directly contains preformatted text."""
+
+    valid_attributes = Element.valid_attributes + ('xml:space',)
 
     def __init__(self, rawsource='', text='', *children, **attributes):
         super().__init__(rawsource, text, *children, **attributes)
@@ -1130,109 +1271,18 @@ class FixedTextElement(TextElement):
 #   option_argument, option_string, raw,
 
 
-# ========
-#  Mixins
-# ========
-
-class Resolvable:
-
-    resolved = 0
-
-
-class BackLinkable:
-
-    def add_backref(self, refid):
-        self['backrefs'].append(refid)
-
-
-# ====================
-#  Element Categories
-# ====================
-
-class Root:
-    pass
-
-
-class Titular:
-    pass
-
-
-class PreBibliographic:
-    """Category of Node which may occur before Bibliographic Nodes."""
-
-
-class Bibliographic:
-    pass
-
-
-class Decorative(PreBibliographic):
-    pass
-
-
-class Structural:
-    pass
-
-
-class Body:
-    pass
-
-
-class General(Body):
-    pass
-
-
-class Sequential(Body):
-    """List-like elements."""
-
-
-class Admonition(Body): pass
-
-
-class Special(Body):
-    """Special internal body elements."""
-
-
-class Invisible(PreBibliographic):
-    """Internal elements that don't appear in output."""
-
-
-class Part:
-    pass
-
-
-class Inline:
-    pass
-
-
-class Referential(Resolvable):
-    pass
-
-
-class Targetable(Resolvable):
-
-    referenced = 0
-
-    indirect_reference_name = None
-    """Holds the whitespace_normalized_name (contains mixed case) of a target.
-    Required for MoinMoin/reST compatibility."""
-
-
-class Labeled:
-    """Contains a `label` as its first element."""
-
-
 # ==============
 #  Root Element
 # ==============
 
 class document(Root, Structural, Element):
-
     """
     The document root element.
 
     Do not instantiate this class directly; use
     `docutils.utils.new_document()` instead.
     """
+    valid_attributes = Element.valid_attributes + ('title',)
 
     def __init__(self, settings, reporter, *args, **kwargs):
         Element.__init__(self, *args, **kwargs)
@@ -1586,26 +1636,30 @@ class document(Root, Structural, Element):
 #  Title Elements
 # ================
 
-class title(Titular, PreBibliographic, TextElement): pass
-class subtitle(Titular, PreBibliographic, TextElement): pass
-class rubric(Titular, TextElement): pass
+class title(Titular, PreBibliographic, SubStructural, TextElement):
+    valid_attributes = Element.valid_attributes + ('auto', 'refid')
+
+
+class subtitle(Titular, PreBibliographic, SubStructural, TextElement): pass
+class rubric(Titular, General, TextElement): pass
 
 
 # ==================
 #  Meta-Data Element
 # ==================
 
-class meta(PreBibliographic, Element):
+class meta(PreBibliographic, SubStructural, Element):
     """Container for "invisible" bibliographic data, or meta-data."""
+    valid_attributes = Element.valid_attributes + (
+        'content', 'dir', 'http-equiv', 'lang', 'media', 'name', 'scheme')
 
 
 # ========================
 #  Bibliographic Elements
 # ========================
 
-class docinfo(Bibliographic, Element): pass
+class docinfo(SubStructural, Element): pass
 class author(Bibliographic, TextElement): pass
-class authors(Bibliographic, Element): pass
 class organization(Bibliographic, TextElement): pass
 class address(Bibliographic, FixedTextElement): pass
 class contact(Bibliographic, TextElement): pass
@@ -1616,11 +1670,16 @@ class date(Bibliographic, TextElement): pass
 class copyright(Bibliographic, TextElement): pass
 
 
+class authors(Bibliographic, Element):
+    """Container for author information for documents with multiple authors."""
+
+
 # =====================
 #  Decorative Elements
 # =====================
 
-class decoration(Decorative, Element):
+class decoration(PreBibliographic, SubStructural, Element):
+    """Container for header and footer."""
 
     def get_header(self):
         if not len(self.children) or not isinstance(self.children[0], header):
@@ -1641,25 +1700,27 @@ class footer(Decorative, Element): pass
 #  Structural Elements
 # =====================
 
-class section(Structural, Element): pass
+class section(Structural, Element):
+    """Document section. The main unit of hierarchy."""
 
 
 class topic(Structural, Element):
-
     """
     Topics are terminal, "leaf" mini-sections, like block quotes with titles,
-    or textual figures.  A topic is just like a section, except that it has no
-    subsections, and it doesn't have to conform to section placement rules.
+    or textual figures.  A topic is just like a section, except that
+    it has no subsections, it does not get listed in the ToC,
+    and it doesn't have to conform to section placement rules.
 
     Topics are allowed wherever body elements (list, table, etc.) are allowed,
     but only at the top level of a section or document.  Topics cannot nest
     inside topics, sidebars, or body elements; you can't have a topic inside a
     table, list, block quote, etc.
     """
+    # "depth" and "local" attributes may be added by the "Contents" transform:
+    valid_attributes = Element.valid_attributes + ('depth', 'local')
 
 
 class sidebar(Structural, Element):
-
     """
     Sidebars are like miniature, parallel documents that occur inside other
     documents, providing related or reference material.  A sidebar is
@@ -1675,7 +1736,12 @@ class sidebar(Structural, Element):
     """
 
 
-class transition(Structural, Element): pass
+class transition(SubStructural, Element):
+    """Transitions are breaks between untitled text parts.
+
+    A transition may not begin or end a section or document, nor may two
+    transitions be immediately adjacent.
+    """
 
 
 # ===============
@@ -1685,8 +1751,17 @@ class transition(Structural, Element): pass
 class paragraph(General, TextElement): pass
 class compound(General, Element): pass
 class container(General, Element): pass
-class bullet_list(Sequential, Element): pass
-class enumerated_list(Sequential, Element): pass
+
+
+class bullet_list(Sequential, Element):
+    valid_attributes = Element.valid_attributes + ('bullet',)
+
+
+class enumerated_list(Sequential, Element):
+    valid_attributes = Element.valid_attributes + (
+        'enumtype', 'prefix', 'suffix', 'start')
+
+
 class list_item(Part, Element): pass
 class definition_list(Sequential, Element): pass
 class definition_list_item(Part, Element): pass
@@ -1694,32 +1769,39 @@ class term(Part, TextElement): pass
 class classifier(Part, TextElement): pass
 class definition(Part, Element): pass
 class field_list(Sequential, Element): pass
-class field(Part, Element): pass
+class field(Part, Bibliographic, Element): pass
 class field_name(Part, TextElement): pass
 class field_body(Part, Element): pass
 
 
 class option(Part, Element):
+    """Option element in an `option_list_item`.
 
+    Groups an option string with zero or more option argument placeholders.
+    """
     child_text_separator = ''
 
 
 class option_argument(Part, TextElement):
+    """Placeholder text for option arguments."""
+    valid_attributes = Element.valid_attributes + ('delimiter',)
 
     def astext(self):
         return self.get('delimiter', ' ') + TextElement.astext(self)
 
 
 class option_group(Part, Element):
-
+    """Groups together one or more `option` elements, all synonyms."""
     child_text_separator = ', '
 
 
-class option_list(Sequential, Element): pass
+class option_list(Sequential, Element):
+    """Two-column list of command-line options and descriptions."""
 
 
 class option_list_item(Part, Element):
-
+    """Container for a pair of `option_group` and `description` elements.
+    """
     child_text_separator = '  '
 
 
@@ -1732,7 +1814,7 @@ class line_block(General, Element): pass
 
 
 class line(Part, TextElement):
-
+    """Single line of text in a `line_block`."""
     indent = None
 
 
@@ -1749,31 +1831,67 @@ class hint(Admonition, Element): pass
 class warning(Admonition, Element): pass
 class admonition(Admonition, Element): pass
 class comment(Special, Invisible, FixedTextElement): pass
-class substitution_definition(Special, Invisible, TextElement): pass
-class target(Special, Invisible, Inline, TextElement, Targetable): pass
-class footnote(General, BackLinkable, Element, Labeled, Targetable): pass
+
+
+class substitution_definition(Special, Invisible, TextElement):
+    valid_attributes = Element.valid_attributes + ('ltrim', 'rtrim')
+
+
+class target(Special, Invisible, Inline, TextElement, Targetable):
+    valid_attributes = Element.valid_attributes + (
+        'anonymous', 'refid', 'refname', 'refuri')
+
+
+class footnote(General, BackLinkable, Element, Labeled, Targetable):
+    valid_attributes = Element.valid_attributes + ('auto', 'backrefs')
+
+
 class citation(General, BackLinkable, Element, Labeled, Targetable): pass
 class label(Part, TextElement): pass
-class figure(General, Element): pass
+
+
+class figure(General, Element):
+    valid_attributes = Element.valid_attributes + ('align', 'width')
+
+
 class caption(Part, TextElement): pass
 class legend(Part, Element): pass
-class table(General, Element): pass
-class tgroup(Part, Element): pass
-class colspec(Part, Element): pass
+
+
+class table(General, Element):
+    valid_attributes = Element.valid_attributes + (
+        'align', 'colsep', 'frame', 'pgwide', 'rowsep', 'width')
+
+
+class tgroup(Part, Element):
+    valid_attributes = Element.valid_attributes + (
+        'align', 'cols', 'colsep', 'rowsep')
+
+
+class colspec(Part, Element):
+    valid_attributes = Element.valid_attributes + (
+        'align', 'char', 'charoff', 'colname', 'colnum',
+        'colsep', 'colwidth', 'rowsep', 'stub')
+
+
 class thead(Part, Element): pass
 class tbody(Part, Element): pass
 class row(Part, Element): pass
-class entry(Part, Element): pass
+
+
+class entry(Part, Element):
+    valid_attributes = Element.valid_attributes + ('morecols', 'morerows')
 
 
 class system_message(Special, BackLinkable, PreBibliographic, Element):
-
     """
     System message element.
 
     Do not instantiate this class directly; use
     ``document.reporter.info/warning/error/severe()`` instead.
     """
+    valid_attributes = BackLinkable.valid_attributes + (
+                           'level', 'line', 'type')
 
     def __init__(self, message=None, *children, **attributes):
         rawsource = attributes.pop('rawsource', '')
@@ -1793,8 +1911,9 @@ class system_message(Special, BackLinkable, PreBibliographic, Element):
 
 
 class pending(Special, Invisible, Element):
-
     """
+    Placeholder for pending operations.
+
     The "pending" element is used to encapsulate a pending operation: the
     operation (transform), the point at which to apply it, and any data it
     requires.  Only the pending operation's location within the document is
@@ -1865,10 +1984,9 @@ class pending(Special, Invisible, Element):
 
 
 class raw(Special, Inline, PreBibliographic, FixedTextElement):
-
+    """Raw data that is to be passed untouched to the Writer.
     """
-    Raw data that is to be passed untouched to the Writer.
-    """
+    valid_attributes = Element.valid_attributes + ('format', 'xml:space')
 
 
 # =================
@@ -1878,10 +1996,25 @@ class raw(Special, Inline, PreBibliographic, FixedTextElement):
 class emphasis(Inline, TextElement): pass
 class strong(Inline, TextElement): pass
 class literal(Inline, TextElement): pass
-class reference(General, Inline, Referential, TextElement): pass
-class footnote_reference(Inline, Referential, TextElement): pass
-class citation_reference(Inline, Referential, TextElement): pass
-class substitution_reference(Inline, TextElement): pass
+
+
+class reference(General, Inline, Referential, TextElement):
+    valid_attributes = Element.valid_attributes + (
+        'anonymous', 'name', 'refid', 'refname', 'refuri')
+
+
+class footnote_reference(Inline, Referential, TextElement):
+    valid_attributes = Element.valid_attributes + ('auto', 'refid', 'refname')
+
+
+class citation_reference(Inline, Referential, TextElement):
+    valid_attributes = Element.valid_attributes + ('refid', 'refname')
+
+
+class substitution_reference(Inline, TextElement):
+    valid_attributes = Element.valid_attributes + ('refname',)
+
+
 class title_reference(Inline, TextElement): pass
 class abbreviation(Inline, TextElement): pass
 class acronym(Inline, TextElement): pass
@@ -1891,13 +2024,23 @@ class math(Inline, TextElement): pass
 
 
 class image(General, Inline, Element):
+    """Reference to an image resource."""
+
+    valid_attributes = Element.valid_attributes + (
+        'uri', 'alt', 'align', 'height', 'width', 'scale', 'loading')
 
     def astext(self):
         return self.get('alt', '')
 
 
 class inline(Inline, TextElement): pass
-class problematic(Inline, TextElement): pass
+
+
+class problematic(Inline, TextElement):
+    valid_attributes = Element.valid_attributes + (
+                           'refid', 'refname', 'refuri')
+
+
 class generated(Inline, TextElement): pass
 
 
@@ -1937,7 +2080,6 @@ node_class_names = """
 
 
 class NodeVisitor:
-
     """
     "Visitor" pattern [GoF95]_ abstract superclass implementation for
     document tree traversals.
@@ -2030,7 +2172,6 @@ class NodeVisitor:
 
 
 class SparseNodeVisitor(NodeVisitor):
-
     """
     Base class for sparse traversals, where only certain node types are of
     interest.  When ``visit_...`` & ``depart_...`` methods should be
@@ -2040,7 +2181,6 @@ class SparseNodeVisitor(NodeVisitor):
 
 
 class GenericNodeVisitor(NodeVisitor):
-
     """
     Generic "Visitor" abstract superclass, for simple traversals.
 
@@ -2091,7 +2231,6 @@ _add_node_class_names(node_class_names)
 
 
 class TreeCopyVisitor(GenericNodeVisitor):
-
     """
     Make a complete copy of a tree or branch, including element attributes.
     """
@@ -2117,7 +2256,6 @@ class TreeCopyVisitor(GenericNodeVisitor):
 
 
 class TreePruningException(Exception):
-
     """
     Base class for `NodeVisitor`-related tree pruning exceptions.
 
@@ -2128,7 +2266,6 @@ class TreePruningException(Exception):
 
 
 class SkipChildren(TreePruningException):
-
     """
     Do not visit any children of the current node.  The current node's
     siblings and ``depart_...`` method are not affected.
@@ -2136,7 +2273,6 @@ class SkipChildren(TreePruningException):
 
 
 class SkipSiblings(TreePruningException):
-
     """
     Do not visit any more siblings (to the right) of the current node.  The
     current node's children and its ``depart_...`` method are not affected.
@@ -2144,7 +2280,6 @@ class SkipSiblings(TreePruningException):
 
 
 class SkipNode(TreePruningException):
-
     """
     Do not visit the current node's children, and do not call the current
     node's ``depart_...`` method.
@@ -2152,7 +2287,6 @@ class SkipNode(TreePruningException):
 
 
 class SkipDeparture(TreePruningException):
-
     """
     Do not call the current node's ``depart_...`` method.  The current node's
     children and siblings are not affected.
@@ -2160,7 +2294,6 @@ class SkipDeparture(TreePruningException):
 
 
 class NodeFound(TreePruningException):
-
     """
     Raise to indicate that the target of a search has been found.  This
     exception must be caught by the client; it is not caught by the traversal
@@ -2169,7 +2302,6 @@ class NodeFound(TreePruningException):
 
 
 class StopTraversal(TreePruningException):
-
     """
     Stop the traversal altogether.  The current node's ``depart_...`` method
     is not affected.  The parent nodes ``depart_...`` methods are also called
@@ -2177,6 +2309,21 @@ class StopTraversal(TreePruningException):
     NodeFound that does not cause exception handling to trickle up to the
     caller.
     """
+
+
+# definition moved here from `utils` to avoid circular import dependency
+def unescape(text, restore_backslashes=False, respect_whitespace=False):
+    """
+    Return a string with nulls removed or restored to backslashes.
+    Backslash-escaped spaces are also removed.
+    """
+    # `respect_whitespace` is ignored (since introduction 2016-12-16)
+    if restore_backslashes:
+        return text.replace('\x00', '\\')
+    else:
+        for sep in ['\x00 ', '\x00\n', '\x00']:
+            text = ''.join(text.split(sep))
+        return text
 
 
 def make_id(string):
