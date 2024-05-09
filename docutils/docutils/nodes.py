@@ -479,6 +479,24 @@ class Element(Node):
     local_attributes = ('backrefs',)
     """Obsolete. Will be removed in Docutils 2.0."""
 
+    valid_children = tuple()
+    """Valid class or tuple of valid classes for child elements.
+
+    NOTE: Derived classes should update this value
+    when supporting child elements.
+    """
+
+    valid_len = (1, None)
+    """Tuple of minimal and maximal number of child elements.
+
+    A maximal value of None stands for "no upper limit".
+
+    Default: one or more child elements.
+
+    NOTE: Derived classes should update this value when there are different
+    restrictions to the number of child elements.
+    """
+
     tagname = None
     """The element generic identifier.
 
@@ -1128,8 +1146,16 @@ class Element(Node):
         except ValueError as e:
             messages.append(e.args[0])  # the message argument
         # TODO: check number of children
+        n_min, n_max = self.valid_len
+        if len(self.children) < n_min:
+            messages.append(f'Expects at least {n_min} children, '
+                            f'not {len(self.children)}.')
+        if n_max is not None and len(self.children) > n_max:
+            messages.append(f'Expects at most {n_max} children, '
+                            f'not {len(self.children)}.')
         for child in self.children:
-            # TODO: check whether child has allowed type
+            if not isinstance(child, self.valid_children):
+                messages.append(f'May not contain "{child.tagname}" elements.')
             child.validate()
         if messages:
             msg = f'Element <{self.tagname}> invalid:\n' + '\n'.join(messages)
@@ -1165,43 +1191,33 @@ class Root:
     """Element at the root of a document tree."""
 
 
-class Titular:
-    """Headings (title, subtitle, rubric)."""
-
-
-class PreBibliographic:
-    """Elements which may occur before Bibliographic Elements."""
-
-
-class Invisible(PreBibliographic):
-    """Internal elements that don't appear in output."""
-
-
-class Bibliographic:
-    """Bibliographic Elements (`docinfo` children)."""
-
-
-class Decorative(PreBibliographic):
-    """`Decorative elements`__ (`header` and `footer`).
-
-    __ https://docutils.sourceforge.io/docs/ref/doctree.html
-       #decorative-elements
-    """
-
-
 class Structural:
-    """`Structural Elements`__ that do not directly contain text data.
+    """`Structural elements`__.
 
     __ https://docutils.sourceforge.io/docs/ref/doctree.html
        #structural-elements
     """
 
 
-class SubStructural:
-    """`Structural Subelements`__ are valid children of Structural Elements.
+class SubRoot:
+    """Elements that may only be children of the root element."""
+
+
+class SubStructural(SubRoot):
+    """`Structural subelements`__ are children of structural elements.
+
+    Most Structural elements accept only some of the SubStructural elements.
 
     __ https://docutils.sourceforge.io/docs/ref/doctree.html
        #structural-subelements
+    """
+
+
+class Bibliographic:
+    """`Bibliographic Elements`__ (displayed document meta-data).
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html
+       #bibliographic-elements
     """
 
 
@@ -1212,16 +1228,17 @@ class Body:
     """
 
 
-class General(Body):
-    """Miscellaneous body elements."""
+class Admonition(Body):
+    """Admonitions (distinctive and self-contained notices)."""
+    valid_children = Body  # (%body.elements;)
 
 
 class Sequential(Body):
     """List-like body elements."""
 
 
-class Admonition(Body):
-    """Admonitions (distinctive and self-contained notices)."""
+class General(Body):
+    """Miscellaneous body elements."""
 
 
 class Special(Body):
@@ -1229,14 +1246,37 @@ class Special(Body):
 
 
 class Part:
-    """`Body Subelements`__.
+    """`Body Subelements`__ always occur within specific parent elements.
 
     __ https://docutils.sourceforge.io/docs/ref/doctree.html#body-subelements
     """
 
 
+class Decorative:
+    """Decorative elements (`header` and `footer`).
+
+    Children of `decoration`.
+    """
+    valid_children = Body  # (%body.elements;)
+
+
 class Inline:
-    """Inline elements."""
+    """Inline elements contain text data and possibly other inline elements.
+    """
+
+
+# Orthogonal categories
+
+class PreBibliographic:
+    """Elements which may occur before Bibliographic Elements."""
+
+
+class Invisible(Special, PreBibliographic):
+    """Internal elements that don't appear in output."""
+
+
+class Labeled:
+    """Contains a `label` as its first element."""
 
 
 class Referential(Resolvable):
@@ -1249,11 +1289,14 @@ class Targetable(Resolvable):
 
     indirect_reference_name = None
     """Holds the whitespace_normalized_name (contains mixed case) of a target.
-    Required for MoinMoin/reST compatibility."""
+    Required for MoinMoin/reST compatibility.
+
+    Provisional.
+    """
 
 
-class Labeled:
-    """Contains a `label` as its first element."""
+class Titular:
+    """Title, sub-title, or informal heading (rubric)."""
 
 
 class TextElement(Element):
@@ -1269,7 +1312,8 @@ class TextElement(Element):
     If passing children to `__init__()`, make sure to set `text` to
     ``''`` or some other suitable value.
     """
-
+    valid_children = (Text, Inline)  # (#PCDATA | %inline.elements;)*
+    valid_len = (0, None)
     child_text_separator = ''
     """Separator for child nodes, used by `astext()` method."""
 
@@ -1292,18 +1336,16 @@ class FixedTextElement(TextElement):
         self.attributes['xml:space'] = 'preserve'
 
 
-# TODO: PureTextElement(TextElement):
-#   """An element which only contains text, no children."""
-#   For elements in the DTD that directly employ #PCDATA in their definition:
-#   citation_reference, comment, footnote_reference, label, math, math_block,
-#   option_argument, option_string, raw,
+class PureTextElement(TextElement):
+    """An element which only contains text, no children."""
+    valid_children = Text  # (#PCDATA)
 
 
 # ==============
 #  Root Element
 # ==============
 
-class document(Root, Structural, Element):
+class document(Root, Element):
     """
     The document root element.
 
@@ -1311,6 +1353,13 @@ class document(Root, Structural, Element):
     `docutils.utils.new_document()` instead.
     """
     valid_attributes = Element.valid_attributes + ('title',)
+    # content model: ( (title, subtitle?)?,
+    #                   meta*,
+    #                   decoration?,
+    #                   (docinfo, transition?)?,
+    #                   %structure.model; )
+    valid_children = (Structural, SubRoot, Body)
+    valid_len = (0, None)  # may be empty
 
     def __init__(self, settings, reporter, *args, **kwargs):
         Element.__init__(self, *args, **kwargs)
@@ -1676,17 +1725,22 @@ class rubric(Titular, General, TextElement): pass
 #  Meta-Data Element
 # ==================
 
-class meta(PreBibliographic, SubStructural, Element):
+class meta(PreBibliographic, SubRoot, Element):
     """Container for "invisible" bibliographic data, or meta-data."""
     valid_attributes = Element.valid_attributes + (
         'content', 'dir', 'http-equiv', 'lang', 'media', 'name', 'scheme')
+    valid_len = (0, 0)  # The <meta> element has no content.
 
 
 # ========================
 #  Bibliographic Elements
 # ========================
 
-class docinfo(SubStructural, Element): pass
+class docinfo(SubRoot, Element):
+    """Container for displayed document meta-data."""
+    valid_children = Bibliographic  # (%bibliographic.elements;)+
+
+
 class author(Bibliographic, TextElement): pass
 class organization(Bibliographic, TextElement): pass
 class address(Bibliographic, FixedTextElement): pass
@@ -1699,15 +1753,21 @@ class copyright(Bibliographic, TextElement): pass
 
 
 class authors(Bibliographic, Element):
-    """Container for author information for documents with multiple authors."""
+    """Container for author information for documents with multiple authors.
+    """
+    # content model: (author, organization?, address?, contact?)+
+    valid_children = (author, organization, address, contact)
 
 
 # =====================
 #  Decorative Elements
 # =====================
 
-class decoration(PreBibliographic, SubStructural, Element):
-    """Container for header and footer."""
+
+class decoration(PreBibliographic, SubRoot, Element):
+    """Container for `header` and `footer`."""
+    valid_children = Decorative  # (header?, footer?)
+    valid_len = (0, 2)           # TODO: empty element does not make sense.
 
     def get_header(self):
         if not len(self.children) or not isinstance(self.children[0], header):
@@ -1730,6 +1790,8 @@ class footer(Decorative, Element): pass
 
 class section(Structural, Element):
     """Document section. The main unit of hierarchy."""
+    # content model: (title, subtitle?, %structure.model;)
+    valid_children = (Structural, SubStructural, Body)
 
 
 class topic(Structural, Element):
@@ -1740,12 +1802,13 @@ class topic(Structural, Element):
     and it doesn't have to conform to section placement rules.
 
     Topics are allowed wherever body elements (list, table, etc.) are allowed,
-    but only at the top level of a section or document.  Topics cannot nest
-    inside topics, sidebars, or body elements; you can't have a topic inside a
-    table, list, block quote, etc.
+    but only at the top level of a sideber, section or document.
+    Topics cannot nest inside topics, or body elements; you can't have
+    a topic inside a table, list, block quote, etc.
     """
     # "depth" and "local" attributes may be added by the "Contents" transform:
     valid_attributes = Element.valid_attributes + ('depth', 'local')
+    valid_children = (title, Body)  # (title?, (%body.elements;)+)
 
 
 class sidebar(Structural, Element):
@@ -1762,6 +1825,8 @@ class sidebar(Structural, Element):
     cannot nest inside sidebars, topics, or body elements; you can't have a
     sidebar inside a table, list, block quote, etc.
     """
+    # content model: ((title, subtitle?)?, (%body.elements; | topic)+)
+    valid_children = (title, subtitle, topic, Body)
 
 
 class transition(SubStructural, Element):
@@ -1770,6 +1835,7 @@ class transition(SubStructural, Element):
     A transition may not begin or end a section or document, nor may two
     transitions be immediately adjacent.
     """
+    valid_len = (0, 0)  # empty element
 
 
 # ===============
@@ -1777,29 +1843,101 @@ class transition(SubStructural, Element):
 # ===============
 
 class paragraph(General, TextElement): pass
-class compound(General, Element): pass
-class container(General, Element): pass
+
+
+class compound(General, Element):
+    valid_children = Body  # (%body.elements;)+
+
+
+class container(General, Element):
+    valid_children = Body  # (%body.elements;)+
+
+
+class attribution(Part, TextElement):
+    """Visible reference to the source of a `block_quote`."""
+
+
+class block_quote(General, Element):
+    """An extended quotation, set off from the main text."""
+    valid_children = (Body, attribution)  # ((%body.elements;)+, attribution?)
+
+
+# Lists
+# =====
+#
+# Lists (Sequential) and related Body Subelements (Part)
+
+class list_item(Part, Element):
+    valid_children = Body  # (%body.elements;)*
+    valid_len = (0, None)
 
 
 class bullet_list(Sequential, Element):
     valid_attributes = Element.valid_attributes + ('bullet',)
+    valid_children = list_item  # (list_item+)
 
 
 class enumerated_list(Sequential, Element):
     valid_attributes = Element.valid_attributes + (
         'enumtype', 'prefix', 'suffix', 'start')
+    valid_children = list_item  # (list_item+)
 
 
-class list_item(Part, Element): pass
-class definition_list(Sequential, Element): pass
-class definition_list_item(Part, Element): pass
 class term(Part, TextElement): pass
 class classifier(Part, TextElement): pass
-class definition(Part, Element): pass
-class field_list(Sequential, Element): pass
-class field(Part, Bibliographic, Element): pass
+
+
+class definition(Part, Element):
+    """Definition of a `term` in a `definition_list`."""
+    valid_children = Body  # (%body.elements;)+
+
+
+class definition_list_item(Part, Element):
+    valid_children = (term, classifier, definition)
+    valid_len = (2, None)  # (term, classifier*, definition)
+
+
+class definition_list(Sequential, Element):
+    """List of terms and their definitions.
+
+    Can be used for glossaries or dictionaries, to describe or
+    classify things, for dialogues, or to itemize subtopics.
+    """
+    valid_children = definition_list_item  # (definition_list_item+)
+
+
 class field_name(Part, TextElement): pass
-class field_body(Part, Element): pass
+
+
+class field_body(Part, Element):
+    valid_children = Body  # (%body.elements;)*
+    valid_len = (0, None)
+
+
+class field(Part, Bibliographic, Element):
+    valid_children = (field_name, field_body)  # (field_name, field_body)
+    valid_len = (2, 2)
+
+
+class field_list(Sequential, Element):
+    """List of label & data pairs.
+
+    Typically rendered as a two-column list.
+    Also used for extension syntax or special processing.
+    """
+    valid_children = field  # (field+)
+
+
+class option_string(Part, PureTextElement):
+    """A literal command-line option. Typically monospaced."""
+
+
+class option_argument(Part, PureTextElement):
+    """Placeholder text for option arguments."""
+    valid_attributes = Element.valid_attributes + ('delimiter',)
+
+    def astext(self):
+        return self.get('delimiter', ' ') + TextElement.astext(self)
 
 
 class option(Part, Element):
@@ -1808,37 +1946,43 @@ class option(Part, Element):
     Groups an option string with zero or more option argument placeholders.
     """
     child_text_separator = ''
-
-
-class option_argument(Part, TextElement):
-    """Placeholder text for option arguments."""
-    valid_attributes = Element.valid_attributes + ('delimiter',)
-
-    def astext(self):
-        return self.get('delimiter', ' ') + TextElement.astext(self)
+    # content model: (option_string, option_argument*)
+    valid_children = (option_string, option_argument)
 
 
 class option_group(Part, Element):
     """Groups together one or more `option` elements, all synonyms."""
     child_text_separator = ', '
+    valid_children = option  # (option+)
 
 
-class option_list(Sequential, Element):
-    """Two-column list of command-line options and descriptions."""
+class description(Part, Element):
+    """Describtion of a command-line option."""
+    valid_children = Body  # (%body.elements;)+
 
 
 class option_list_item(Part, Element):
     """Container for a pair of `option_group` and `description` elements.
     """
     child_text_separator = '  '
+    valid_children = (option_group, description)  # (option_group, description)
+    valid_len = (2, 2)
 
 
-class option_string(Part, TextElement): pass
-class description(Part, Element): pass
+class option_list(Sequential, Element):
+    """Two-column list of command-line options and descriptions."""
+    valid_children = option_list_item  # (option_list_item+)
+
+
+# Pre-formatted text blocks
+# =========================
+
 class literal_block(General, FixedTextElement): pass
 class doctest_block(General, FixedTextElement): pass
-class math_block(General, FixedTextElement): pass
-class line_block(General, Element): pass
+
+
+class math_block(General, FixedTextElement, PureTextElement):
+    """Mathematical notation (display formula)."""
 
 
 class line(Part, TextElement):
@@ -1846,8 +1990,19 @@ class line(Part, TextElement):
     indent = None
 
 
-class block_quote(General, Element): pass
-class attribution(Part, TextElement): pass
+class line_block(General, Element):
+    """Sequence of lines and nested line blocks.
+    """
+    # recursive content model: (line | line_block)+
+
+
+line_block.valid_children = (line, line_block)
+
+
+# Admonitions
+# ===========
+# distinctive and self-contained notices
+
 class attention(Admonition, Element): pass
 class caution(Admonition, Element): pass
 class danger(Admonition, Element): pass
@@ -1857,59 +2012,136 @@ class note(Admonition, Element): pass
 class tip(Admonition, Element): pass
 class hint(Admonition, Element): pass
 class warning(Admonition, Element): pass
-class admonition(Admonition, Element): pass
-class comment(Special, Invisible, FixedTextElement): pass
 
 
-class substitution_definition(Special, Invisible, TextElement):
+class admonition(Admonition, Element):
+    valid_children = (title, Body)  # (title, (%body.elements;)+)
+    valid_len = (2, None)
+
+
+# Invisible elements
+# ==================
+
+class comment(Invisible, FixedTextElement, PureTextElement):
+    """Author notes, hidden from the output."""
+
+
+class substitution_definition(Invisible, TextElement):
     valid_attributes = Element.valid_attributes + ('ltrim', 'rtrim')
 
 
-class target(Special, Invisible, Inline, TextElement, Targetable):
+class target(Invisible, Inline, TextElement, Targetable):
     valid_attributes = Element.valid_attributes + (
         'anonymous', 'refid', 'refname', 'refuri')
 
 
+# Footnote and citation
+# =====================
+
+class label(Part, PureTextElement):
+    """Visible identifier for footnotes and citations."""
+
+
 class footnote(General, BackLinkable, Element, Labeled, Targetable):
+    """Labelled note providing additional context (footnote or endnote)."""
     valid_attributes = Element.valid_attributes + ('auto', 'backrefs')
+    valid_children = (label, Body)  # (label?, (%body.elements;)+)
 
 
-class citation(General, BackLinkable, Element, Labeled, Targetable): pass
-class label(Part, TextElement): pass
+class citation(General, BackLinkable, Element, Labeled, Targetable):
+    valid_children = (label, Body)  # (label, (%body.elements;)+)
+    valid_len = (2, None)
 
 
-class figure(General, Element):
-    valid_attributes = Element.valid_attributes + ('align', 'width')
+# Graphical elements
+# ==================
+
+class image(General, Inline, Element):
+    """Reference to an image resource.
+
+    May be body element or inline element.
+    """
+    valid_attributes = Element.valid_attributes + (
+        'uri', 'alt', 'align', 'height', 'width', 'scale', 'loading')
+    valid_len = (0, 0)  # emtpy element
+
+    def astext(self):
+        return self.get('alt', '')
 
 
 class caption(Part, TextElement): pass
-class legend(Part, Element): pass
 
 
-class table(General, Element):
+class legend(Part, Element):
+    """A wrapper for text accompanying a `figure` that is not the caption."""
+    valid_children = Body  # (%body.elements;)
+
+
+class figure(General, Element):
+    """A formal figure, generally an illustration, with a title."""
+    valid_attributes = Element.valid_attributes + ('align', 'width')
+    # content model: (image, ((caption, legend?) | legend))
+    valid_children = (image, caption, legend)
+    valid_len = (1, 3)
+    # TODO: According to the DTD, a caption or legend is required
+    # but rST allows "bare" figures which are formatted differently from
+    # images (floating in LaTeX, nested in a <figure> in HTML).
+
+
+# Tables
+# ======
+
+class entry(Part, Element):
+    """An entry in a `row` (a table cell)."""
     valid_attributes = Element.valid_attributes + (
-        'align', 'colsep', 'frame', 'pgwide', 'rowsep', 'width')
+        'align', 'char', 'charoff', 'colname', 'colsep', 'morecols',
+        'morerows', 'namest', 'nameend', 'rowsep', 'valign')
+    valid_children = Body  # %tbl.entry.mdl -> (%body.elements;)*
+    valid_len = (0, None)  # may be empty
 
 
-class tgroup(Part, Element):
-    valid_attributes = Element.valid_attributes + (
-        'align', 'cols', 'colsep', 'rowsep')
+class row(Part, Element):
+    """Row of table cells."""
+    valid_attributes = Element.valid_attributes + ('rowsep', 'valign')
+    valid_children = entry  # (%tbl.row.mdl;) -> entry+
 
 
 class colspec(Part, Element):
+    """Specifications for a column in a `tgroup`."""
     valid_attributes = Element.valid_attributes + (
         'align', 'char', 'charoff', 'colname', 'colnum',
         'colsep', 'colwidth', 'rowsep', 'stub')
+    valid_len = (0, 0)  # empty element
 
 
-class thead(Part, Element): pass
-class tbody(Part, Element): pass
-class row(Part, Element): pass
+class thead(Part, Element):
+    """Row(s) that form the head of a `tgroup`."""
+    valid_attributes = Element.valid_attributes + ('valign',)
+    valid_children = row  # (row+)
 
 
-class entry(Part, Element):
-    valid_attributes = Element.valid_attributes + ('morecols', 'morerows')
+class tbody(Part, Element):
+    """Body of a `tgroup`."""
+    valid_attributes = Element.valid_attributes + ('valign',)
+    valid_children = row  # (row+)
 
+
+class tgroup(Part, Element):
+    """A portion of a table. Most tables have just one `tgroup`."""
+    valid_attributes = Element.valid_attributes + (
+        'align', 'cols', 'colsep', 'rowsep')
+    valid_children = (colspec, thead, tbody)  # (colspec*, thead?, tbody)
+
+
+class table(General, Element):
+    """A data arrangement with rows and columns."""
+    valid_attributes = Element.valid_attributes + (
+        'align', 'colsep', 'frame', 'pgwide', 'rowsep', 'width')
+    valid_children = (title, tgroup)  # (title?, tgroup+)
+
+
+# Special purpose elements
+# ========================
 
 class system_message(Special, BackLinkable, PreBibliographic, Element):
     """
@@ -1920,6 +2152,7 @@ class system_message(Special, BackLinkable, PreBibliographic, Element):
     """
     valid_attributes = BackLinkable.valid_attributes + (
                            'level', 'line', 'type')
+    valid_children = Body  # (%body.elements;)+
 
     def __init__(self, message=None, *children, **attributes):
         rawsource = attributes.pop('rawsource', '')
@@ -1938,7 +2171,7 @@ class system_message(Special, BackLinkable, PreBibliographic, Element):
                                       self['level'], Element.astext(self))
 
 
-class pending(Special, Invisible, Element):
+class pending(Invisible, Element):
     """
     Placeholder for pending operations.
 
@@ -1966,6 +2199,7 @@ class pending(Special, Invisible, Element):
     `docutils.transforms.Transformer` stage of processing can run all pending
     transforms.
     """
+    valid_len = (0, 0)  # empty element
 
     def __init__(self, transform, details=None,
                  rawsource='', *children, **attributes):
@@ -2011,7 +2245,8 @@ class pending(Special, Invisible, Element):
         return obj
 
 
-class raw(Special, Inline, PreBibliographic, FixedTextElement):
+class raw(Special, Inline, PreBibliographic,
+          FixedTextElement, PureTextElement):
     """Raw data that is to be passed untouched to the Writer.
     """
     valid_attributes = Element.valid_attributes + ('format', 'xml:space')
@@ -2031,11 +2266,11 @@ class reference(General, Inline, Referential, TextElement):
         'anonymous', 'name', 'refid', 'refname', 'refuri')
 
 
-class footnote_reference(Inline, Referential, TextElement):
+class footnote_reference(Inline, Referential, PureTextElement):
     valid_attributes = Element.valid_attributes + ('auto', 'refid', 'refname')
 
 
-class citation_reference(Inline, Referential, TextElement):
+class citation_reference(Inline, Referential, PureTextElement):
     valid_attributes = Element.valid_attributes + ('refid', 'refname')
 
 
@@ -2048,17 +2283,10 @@ class abbreviation(Inline, TextElement): pass
 class acronym(Inline, TextElement): pass
 class superscript(Inline, TextElement): pass
 class subscript(Inline, TextElement): pass
-class math(Inline, TextElement): pass
 
 
-class image(General, Inline, Element):
-    """Reference to an image resource."""
-
-    valid_attributes = Element.valid_attributes + (
-        'uri', 'alt', 'align', 'height', 'width', 'scale', 'loading')
-
-    def astext(self):
-        return self.get('alt', '')
+class math(Inline, PureTextElement):
+    """Mathematical notation in running text."""
 
 
 class inline(Inline, TextElement): pass
