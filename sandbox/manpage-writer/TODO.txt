@@ -83,6 +83,13 @@ but the rST source would be more like this ::
   man(1) describes the man page ...
 
 so the MR things need to be found with regexp or marked with a role/directive ?
+or a reference type man:tbl(1) 
+
+The ``\%`` is :
+
+  a  word  may be broken at hyphens, at ``\%`` or ``\:`` escape sequences
+
+whatfore at the word start ?
 
 
 groff_man_style on 
@@ -117,6 +124,28 @@ groff_man_style on
        sands, and number signs in HTTP(S) URIs.  The formatter removes  \:  escape  se‐
        quences  from  hyperlinks  when supplying device control commands to output dri‐
        vers.
+
+
+Used macros ... to be completed
+-------------------------------
+
+       .TP [indentation]
+              Set  a  paragraph  with a leading tag, and the remainder of the paragraph
+              indented.  A one-line input trap is planted; text on the next line, which
+              can be formatted with a macro, becomes the tag, which is  placed  at  the
+              current  left  margin.   The  tag  can be extended with the \c escape se‐
+              quence.  Subsequent text is indented by indentation, if specified, and by
+              the amount of the IN register otherwise.  If the tag is not  as  wide  as
+              the indentation, the paragraph starts on the same line as the tag, at the
+              applicable indentation, and continues on the following lines.  Otherwise,
+              the  descriptive  part  of the paragraph begins on the line following the
+              tag.
+
+       .TQ    Set an additional tag for a paragraph tagged with .TP.  An input trap  is
+              planted as with .TP.
+
+              This  macro  is  a  GNU  extension  not  defined on systems running AT&T,
+              Plan 9, or Solaris troff; see an-ext.tmac in section “Files” below.
 
 
 
