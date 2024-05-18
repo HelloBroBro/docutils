@@ -91,9 +91,14 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 
 
 class Writer(writers.Writer):
+    """
+    manpage writer class
+    """
 
     supported = ('manpage',)
     """Formats this writer supports."""
+
+    # manpage writer specfic settings. not yet
 
     output = None
     """Final translated form of `document`."""
@@ -109,6 +114,9 @@ class Writer(writers.Writer):
 
 
 class Table:
+    """
+    man package table handling. 
+    """
     def __init__(self):
         self._rows = []
         self._options = ['box', 'center']
@@ -316,6 +324,7 @@ class Translator(nodes.NodeVisitor):
 
     def list_start(self, node):
         class EnumChar:
+            """list item numbering/markup handling"""
             enum_style = {
                     'bullet': '\\(bu',
                      }
@@ -346,17 +355,15 @@ class Translator(nodes.NodeVisitor):
                     return self.enum_style[self._style]
                 self._cnt += 1
                 # TODO add prefix postfix
-                if self._style == 'arabic':
-                    return "%d." % self._cnt
-                elif self._style in ('loweralpha', 'upperalpha'):
+                if self._style in ('loweralpha', 'upperalpha'):
                     return "%c." % self._cnt
-                elif self._style.endswith('roman'):
+                if self._style.endswith('roman'):
                     res = roman.toRoman(self._cnt) + '.'
                     if self._style.startswith('upper'):
                         return res.upper()
                     return res.lower()
-                else:
-                    return "%d." % self._cnt
+                # else 'arabic', ...
+                return "%d." % self._cnt
 
             def get_width(self):
                 return self._indent
@@ -684,8 +691,7 @@ class Translator(nodes.NodeVisitor):
         if self._in_docinfo:
             self._field_name = node.astext()
             raise nodes.SkipNode
-        else:
-            self.body.append(self.defs['field_name'][0])
+        self.body.append(self.defs['field_name'][0])
 
     def depart_field_name(self, node):
         self.body.append(self.defs['field_name'][1])
@@ -784,9 +790,8 @@ class Translator(nodes.NodeVisitor):
         pass
 
     def visit_label(self, node):
-        # footnote and citation
-        if (isinstance(node.parent, nodes.footnote)
-            or isinstance(node.parent, nodes.citation)):
+        # footnote and citation labels are written in their visit_ functions.
+        if isinstance(node.parent, (nodes.footnote, nodes.citation)):
             raise nodes.SkipNode
         self.document.reporter.warning('"unsupported "label"',
                                        base_node=node)
