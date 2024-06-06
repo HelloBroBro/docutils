@@ -398,8 +398,13 @@ class Text(Node, str):
     def lstrip(self, chars=None):
         return self.__class__(str.lstrip(self, chars))
 
-    def validate(self):
-        pass  # Text nodes have no attributes and no children.
+    def validate(self, recursive=True):
+        """Validate Docutils Document Tree element ("doctree")."""
+        # Text nodes have no attributes and no children.
+
+    def check_position(self):
+        """Hook for additional checks of the parent's content model."""
+        # no special placement requirements for Text nodes
 
 
 class Element(Node):
@@ -479,22 +484,22 @@ class Element(Node):
     local_attributes = ('backrefs',)
     """Obsolete. Will be removed in Docutils 2.0."""
 
-    valid_children = tuple()
-    """Valid class or tuple of valid classes for child elements.
+    content_model = tuple()
+    """Python representation of the element's content model (cf. docutils.dtd).
 
-    NOTE: Derived classes should update this value
-    when supporting child elements.
-    """
+    A tuple of ``(category, quantifier)`` tuples with
 
-    valid_len = (1, None)
-    """Tuple of minimal and maximal number of child elements.
+    :category:   class or tuple of classes that are expected at this place(s)
+                 in the list of children
+    :quantifier: string representation stating how many elements
+                 of `category` are expected. Value is one of:
+                 '.' (exactly one), '?' (zero or one),
+                 '+' (one or more), '*' (zero or more).
 
-    A maximal value of None stands for "no upper limit".
+    NOTE: The default describes the empty element. Derived classes should
+    update this value to match teir content model.
 
-    Default: one or more child elements.
-
-    NOTE: Derived classes should update this value when there are different
-    restrictions to the number of child elements.
+    Provisional.
     """
 
     tagname = None
@@ -515,7 +520,7 @@ class Element(Node):
         NOTE: some elements do not set this value (default '').
         """
         if isinstance(rawsource, Element):
-            raise ValueError('First argument "rawsource" must be a string.')
+            raise TypeError('First argument "rawsource" must be a string.')
 
         self.children = []
         """List of child nodes (elements and/or `Text`)."""
@@ -1120,7 +1125,7 @@ class Element(Node):
         Convert string values to expected datatype.
         Normalize values.
 
-        Raise `ValueError` for invalid attributes or attribute values.
+        Raise `ValidationError` for invalid attributes or attribute values.
 
         Provisional.
         """
@@ -1129,62 +1134,110 @@ class Element(Node):
             if key.startswith('internal:'):
                 continue  # see docs/user/config.html#expose-internals
             if key not in self.valid_attributes:
-                va = ' '.join(self.valid_attributes)
+                va = '", "'.join(self.valid_attributes)
                 messages.append(f'Attribute "{key}" not one of "{va}".')
                 continue
             try:
                 self.attributes[key] = ATTRIBUTE_VALIDATORS[key](value)
             except (ValueError, TypeError, KeyError) as e:
                 messages.append(
-                    f'Attribute "{key}" has invalid value "{value}".\n{e}')
+                    f'Attribute "{key}" has invalid value "{value}".\n  {e}')
         if messages:
-            raise ValueError('\n'.join(messages))
+            raise ValidationError(f'Element {self.starttag()} invalid:\n  '
+                                  + '\n  '.join(messages),
+                                  problematic_element=self)
 
-    def validate(self):
-        """Validate element against the Docutils Document Model ("doctree").
+    def validate_content(self, model=None, elements=None):
+        """Test compliance of `elements` with `model`.
 
-        Raise ValueError if there are violations.
+        :model: content model description, default `self.content_model`,
+        :elements: list of doctree elements, default `self.children`.
+
+        Return list of children that do not fit in the model or raise
+        `ValidationError` if the content does not comply with the `model`.
+
+        Provisional.
+        """
+        if model is None:
+            model = self.content_model
+        if elements is None:
+            elements = self.children
+        ichildren = iter(elements)
+        child = next(ichildren, None)
+        for category, quantifier in model:
+            if not isinstance(child, category):
+                if quantifier in ('.', '+'):
+                    raise ValidationError(self._report_child(child, category),
+                                          problematic_element=child)
+                else:  # quantifier in ('?', '*') -> optional child
+                    continue  # try same child with next part of content model
+            else:
+                # Check additional placement constraints (if applicable):
+                child.check_position()
+            # advance:
+            if quantifier in ('.', '?'):  # go to next element
+                child = next(ichildren, None)
+            else:  # if quantifier in ('*', '+'):  # pass all matching elements
+                for child in ichildren:
+                    if not isinstance(child, category):
+                        break
+                    child.check_position()
+                else:
+                    child = None
+        return [] if child is None else [child, *ichildren]
+
+    def _report_child(self, child, category):
+        # Return a str reporting a missing child or child of wrong category.
+        try:
+            type = category.__name__
+        except AttributeError:
+            type = '> or <'.join(c.__name__ for c in category)
+        msg = f'Element {self.starttag()} invalid:\n'
+        if child is None:
+            return f'{msg}  Missing child of type <{type}>.'
+        if isinstance(child, Text):
+            return (f'{msg}  Expecting child of type <{type}>, '
+                    f'not text data "{child.astext()}".')
+        return (f'{msg}  Expecting child of type <{type}>, '
+                f'not {child.starttag()}.')
+
+    def check_position(self):
+        """Hook for additional checks of the parent's content model.
+
+        Raise ValidationError, if `self` is at an invalid position.
+        See `subtitle.check_position()` and `transition.check_position()`.
+        """
+
+    def validate(self, recursive=True):
+        """Validate Docutils Document Tree element ("doctree").
+
+        Raise ValidationError if there are violations.
+        If `recursive` is True, validate also the element's descendants.
+
+        See `The Docutils Document Tree`__ for details of the
+        Docutils Document Model.
+
+        __ https://docutils.sourceforge.io/docs/ref/doctree.html
 
         Provisional (work in progress).
         """
-        messages = []
-        try:
-            self.validate_attributes()
-        except ValueError as e:
-            messages.append(str(e))
-        # test number of children
-        n_min, n_max = self.valid_len
-        if len(self.children) < n_min:
-            messages.append(f'Expects at least {n_min} children, '
-                            f'not {len(self.children)}.')
-        if n_max is not None and len(self.children) > n_max:
-            messages.append(f'Expects at most {n_max} children, '
-                            f'not {len(self.children)}.')
-        for child in self.children:
-            if not isinstance(child, self.valid_children):
-                messages.append(f'May not contain "{child.tagname}" elements.')
-            child.validate()
-        if messages:
-            raise ValueError(f'Element <{self.tagname}> invalid:\n  '
-                             + '\n  '.join(messages))
+        self.validate_attributes()
 
+        leftover_childs = self.validate_content()
+        for child in leftover_childs:
+            if isinstance(child, Text):
+                raise ValidationError(f'Element {self.starttag()} invalid:\n'
+                                      f'  Spurious text: "{child.astext()}".',
+                                      problematic_element=self)
+            else:
+                raise ValidationError(f'Element {self.starttag()} invalid:\n'
+                                      f'  Child element {child.starttag()} '
+                                      'not allowed at this position.',
+                                      problematic_element=child)
 
-# ========
-#  Mixins
-# ========
-
-class Resolvable:
-    resolved = False
-
-
-class BackLinkable:
-    """Mixin for Elements that accept a "backrefs" attribute."""
-
-    list_attributes = Element.list_attributes + ('backrefs',)
-    valid_attributes = Element.valid_attributes + ('backrefs',)
-
-    def add_backref(self, refid):
-        self['backrefs'].append(refid)
+        if recursive:
+            for child in self:
+                child.validate(recursive=recursive)
 
 
 # ====================
@@ -1205,14 +1258,10 @@ class Structural:
     """
 
 
-class SubRoot:
-    """Elements that may only be children of the root element."""
+class SubStructural:
+    """`Structural subelements`__ are children of `Structural` elements.
 
-
-class SubStructural(SubRoot):
-    """`Structural subelements`__ are children of structural elements.
-
-    Most Structural elements accept only some of the SubStructural elements.
+    Most Structural elements accept only specific `SubStructural` elements.
 
     __ https://docutils.sourceforge.io/docs/ref/doctree.html
        #structural-subelements
@@ -1236,7 +1285,7 @@ class Body:
 
 class Admonition(Body):
     """Admonitions (distinctive and self-contained notices)."""
-    valid_children = Body  # (%body.elements;)
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
 
 class Sequential(Body):
@@ -1263,7 +1312,7 @@ class Decorative:
 
     Children of `decoration`.
     """
-    valid_children = Body  # (%body.elements;)
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
 
 class Inline:
@@ -1271,8 +1320,8 @@ class Inline:
     """
 
 
-# Orthogonal categories
-# =====================
+# Orthogonal categories and Mixins
+# ================================
 
 class PreBibliographic:
     """Elements which may occur before Bibliographic Elements."""
@@ -1284,6 +1333,20 @@ class Invisible(Special, PreBibliographic):
 
 class Labeled:
     """Contains a `label` as its first element."""
+
+
+class Resolvable:
+    resolved = False
+
+
+class BackLinkable:
+    """Mixin for Elements that accept a "backrefs" attribute."""
+
+    list_attributes = Element.list_attributes + ('backrefs',)
+    valid_attributes = Element.valid_attributes + ('backrefs',)
+
+    def add_backref(self, refid):
+        self['backrefs'].append(refid)
 
 
 class Referential(Resolvable):
@@ -1319,8 +1382,9 @@ class TextElement(Element):
     If passing children to `__init__()`, make sure to set `text` to
     ``''`` or some other suitable value.
     """
-    valid_children = (Text, Inline)  # (#PCDATA | %inline.elements;)*
-    valid_len = (0, None)
+    content_model = (  # (#PCDATA | %inline.elements;)*
+                     ((Text, Inline), '*'),)
+
     child_text_separator = ''
     """Separator for child nodes, used by `astext()` method."""
 
@@ -1345,12 +1409,151 @@ class FixedTextElement(TextElement):
 
 class PureTextElement(TextElement):
     """An element which only contains text, no children."""
-    valid_children = Text  # (#PCDATA)
+    content_model = ((Text, '?'),)  # (#PCDATA)
 
 
-# ==============
-#  Root Element
-# ==============
+# =================================
+#  Concrete Document Tree Elements
+# =================================
+#
+# See https://docutils.sourceforge.io/docs/ref/doctree.html#element-reference
+
+# Decorative Elements
+# ===================
+
+class header(Decorative, Element): pass
+class footer(Decorative, Element): pass
+
+
+# Structural Subelements
+# ======================
+
+class title(Titular, PreBibliographic, SubStructural, TextElement):
+    """Title of `document`, `section`, `topic` and generic `admonition`.
+    """
+    valid_attributes = Element.valid_attributes + ('auto', 'refid')
+
+
+class subtitle(Titular, PreBibliographic, SubStructural, TextElement):
+    """Sub-title of `document`, `section` and `sidebar`."""
+
+    def check_position(self):
+        """Check position of subtitle: must follow a title."""
+        if self.parent and self.parent.index(self) == 0:
+            raise ValidationError(f'Element {self.parent.starttag()} invalid:'
+                                  '\n  <subtitle> only allowed after <title>.',
+                                  problematic_element=self)
+
+
+class meta(PreBibliographic, SubStructural, Element):
+    """Container for "invisible" bibliographic data, or meta-data."""
+    valid_attributes = Element.valid_attributes + (
+        'content', 'dir', 'http-equiv', 'lang', 'media', 'name', 'scheme')
+
+
+class docinfo(SubStructural, Element):
+    """Container for displayed document meta-data."""
+    content_model = (  # (%bibliographic.elements;)+
+                     (Bibliographic, '+'),)
+
+
+class decoration(PreBibliographic, SubStructural, Element):
+    """Container for `header` and `footer`."""
+    content_model = (  # (header?, footer?)
+                     (header, '?'),
+                     (footer, '?'))  # TODO: empty element does not make sense.
+
+    def get_header(self):
+        if not len(self.children) or not isinstance(self.children[0], header):
+            self.insert(0, header())
+        return self.children[0]
+
+    def get_footer(self):
+        if not len(self.children) or not isinstance(self.children[-1], footer):
+            self.append(footer())
+        return self.children[-1]
+
+
+class transition(SubStructural, Element):
+    """Transitions__ are breaks between untitled text parts.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#transition
+    """
+
+    def check_position(self):
+        """Check additional constraints on `transition` placement.
+
+        A transition may not begin or end a section or document,
+        nor may two transitions be immediately adjacent.
+        """
+        messages = [f'Element {self.parent.starttag()} invalid:']
+        predecessor = self.previous_sibling()
+        if (predecessor is None  # index == 0
+            or isinstance(predecessor, (title, subtitle, meta, decoration))
+            # A transition following these elements still counts as
+            # "at the beginning of a document or section".
+            ):
+            messages.append(
+                '<transition> may not begin a section or document.')
+        if self.parent.index(self) == len(self.parent) - 1:
+            messages.append('<transition> may not end a section or document.')
+        if isinstance(predecessor, transition):
+            messages.append(
+                '<transition> may not directly follow another transition.')
+        if len(messages) > 1:
+            raise ValidationError('\n  '.join(messages),
+                                  problematic_element=self)
+
+
+# Structural Elements
+# ===================
+
+class topic(Structural, Element):
+    """
+    Topics__ are non-recursive, mini-sections.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#topic
+    """
+    content_model = (  # (title?, (%body.elements;)+)
+                     (title, '?'),
+                     (Body, '+'))
+
+
+class sidebar(Structural, Element):
+    """
+    Sidebars__ are like parallel documents providing related material.
+
+    A sidebar is typically offset by a border and "floats" to the side
+    of the page
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#sidebar
+    """
+    content_model = (  # ((title, subtitle?)?, (%body.elements; | topic)+)
+                     (title, '?'),
+                     (subtitle, '?'),
+                     ((topic, Body), '+'))
+    # "subtitle only after title" is ensured in `subtitle.check_position()`.
+
+
+class section(Structural, Element):
+    """Document section__. The main unit of hierarchy.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#section
+    """
+    # recursive content model, see below
+
+
+section.content_model = (  # (title, subtitle?, %structure.model;)
+                         (title, '.'),
+                         (subtitle, '?'),
+                         ((Body, topic, sidebar, transition), '*'),
+                         ((section, transition), '*'),
+                         )
+# Correct transition placement is ensured in `transition.check_position()`.
+
+
+# Root Element
+# ============
 
 class document(Root, Element):
     """
@@ -1360,13 +1563,22 @@ class document(Root, Element):
     `docutils.utils.new_document()` instead.
     """
     valid_attributes = Element.valid_attributes + ('title',)
-    # content model: ( (title, subtitle?)?,
-    #                   meta*,
-    #                   decoration?,
-    #                   (docinfo, transition?)?,
-    #                   %structure.model; )
-    valid_children = (Structural, SubRoot, Body)
-    valid_len = (0, None)  # may be empty
+    content_model = (  # ( (title, subtitle?)?,
+                       #    meta*,
+                       #    decoration?,
+                       #    (docinfo, transition?)?,
+                       #    %structure.model; )
+                      (title, '?'),
+                      (subtitle, '?'),
+                      (meta, '*'),
+                      (decoration, '?'),
+                      (docinfo, '?'),
+                      (transition, '?'),
+                      ((Body, topic, sidebar, transition), '*'),
+                      ((section, transition), '*'),
+                     )
+    # Additional restrictions for `subtitle` and `transition` are tested
+    # with the respective `check_position()` methods.
 
     def __init__(self, settings, reporter, *args, **kwargs):
         Element.__init__(self, *args, **kwargs)
@@ -1716,37 +1928,8 @@ class document(Root, Element):
         return self.decoration
 
 
-# ================
-#  Title Elements
-# ================
-
-class title(Titular, PreBibliographic, SubStructural, TextElement):
-    valid_attributes = Element.valid_attributes + ('auto', 'refid')
-
-
-class subtitle(Titular, PreBibliographic, SubStructural, TextElement): pass
-class rubric(Titular, General, TextElement): pass
-
-
-# ==================
-#  Meta-Data Element
-# ==================
-
-class meta(PreBibliographic, SubRoot, Element):
-    """Container for "invisible" bibliographic data, or meta-data."""
-    valid_attributes = Element.valid_attributes + (
-        'content', 'dir', 'http-equiv', 'lang', 'media', 'name', 'scheme')
-    valid_len = (0, 0)  # The <meta> element has no content.
-
-
-# ========================
-#  Bibliographic Elements
-# ========================
-
-class docinfo(SubRoot, Element):
-    """Container for displayed document meta-data."""
-    valid_children = Bibliographic  # (%bibliographic.elements;)+
-
+# Bibliographic Elements
+# ======================
 
 class author(Bibliographic, TextElement): pass
 class organization(Bibliographic, TextElement): pass
@@ -1762,100 +1945,41 @@ class copyright(Bibliographic, TextElement): pass
 class authors(Bibliographic, Element):
     """Container for author information for documents with multiple authors.
     """
-    # content model: (author, organization?, address?, contact?)+
-    valid_children = (author, organization, address, contact)
+    content_model = (  # (author, organization?, address?, contact?)+
+                     (author, '+'),
+                     (organization, '?'),
+                     (address, '?'),
+                     (contact, '?'))
+
+    def validate_content(self):
+        """Repeatedly test for children matching the content model.
+
+        Provisional.
+        """
+        relics = super().validate_content()
+        while relics:
+            relics = super().validate_content(elements=relics)
+        return relics
 
 
-# =====================
-#  Decorative Elements
-# =====================
-
-
-class decoration(PreBibliographic, SubRoot, Element):
-    """Container for `header` and `footer`."""
-    valid_children = Decorative  # (header?, footer?)
-    valid_len = (0, 2)           # TODO: empty element does not make sense.
-
-    def get_header(self):
-        if not len(self.children) or not isinstance(self.children[0], header):
-            self.insert(0, header())
-        return self.children[0]
-
-    def get_footer(self):
-        if not len(self.children) or not isinstance(self.children[-1], footer):
-            self.append(footer())
-        return self.children[-1]
-
-
-class header(Decorative, Element): pass
-class footer(Decorative, Element): pass
-
-
-# =====================
-#  Structural Elements
-# =====================
-
-class section(Structural, Element):
-    """Document section. The main unit of hierarchy."""
-    # content model: (title, subtitle?, %structure.model;)
-    valid_children = (Structural, SubStructural, Body)
-
-
-class topic(Structural, Element):
-    """
-    Topics are terminal, "leaf" mini-sections, like block quotes with titles,
-    or textual figures.  A topic is just like a section, except that
-    it has no subsections, it does not get listed in the ToC,
-    and it doesn't have to conform to section placement rules.
-
-    Topics are allowed wherever body elements (list, table, etc.) are allowed,
-    but only at the top level of a sideber, section or document.
-    Topics cannot nest inside topics, or body elements; you can't have
-    a topic inside a table, list, block quote, etc.
-    """
-    valid_children = (title, Body)  # (title?, (%body.elements;)+)
-
-
-class sidebar(Structural, Element):
-    """
-    Sidebars are like miniature, parallel documents that occur inside other
-    documents, providing related or reference material.  A sidebar is
-    typically offset by a border and "floats" to the side of the page; the
-    document's main text may flow around it.  Sidebars can also be likened to
-    super-footnotes; their content is outside of the flow of the document's
-    main text.
-
-    Sidebars are allowed wherever body elements (list, table, etc.) are
-    allowed, but only at the top level of a section or document.  Sidebars
-    cannot nest inside sidebars, topics, or body elements; you can't have a
-    sidebar inside a table, list, block quote, etc.
-    """
-    # content model: ((title, subtitle?)?, (%body.elements; | topic)+)
-    valid_children = (title, subtitle, topic, Body)
-
-
-class transition(SubStructural, Element):
-    """Transitions are breaks between untitled text parts.
-
-    A transition may not begin or end a section or document, nor may two
-    transitions be immediately adjacent.
-    """
-    valid_len = (0, 0)  # empty element
-
-
-# ===============
-#  Body Elements
-# ===============
+# Body Elements
+# =============
+#
+# General
+# -------
+#
+# Miscellaneous Body Elements and related Body Subelements (Part)
 
 class paragraph(General, TextElement): pass
+class rubric(Titular, General, TextElement): pass
 
 
 class compound(General, Element):
-    valid_children = Body  # (%body.elements;)+
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
 
 class container(General, Element):
-    valid_children = Body  # (%body.elements;)+
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
 
 class attribution(Part, TextElement):
@@ -1864,28 +1988,29 @@ class attribution(Part, TextElement):
 
 class block_quote(General, Element):
     """An extended quotation, set off from the main text."""
-    valid_children = (Body, attribution)  # ((%body.elements;)+, attribution?)
+    content_model = (  # ((%body.elements;)+, attribution?)
+                     (Body, '+'),
+                     (attribution, '?'))
 
 
 # Lists
-# =====
+# -----
 #
 # Lists (Sequential) and related Body Subelements (Part)
 
 class list_item(Part, Element):
-    valid_children = Body  # (%body.elements;)*
-    valid_len = (0, None)
+    content_model = ((Body, '*'),)  # (%body.elements;)*
 
 
 class bullet_list(Sequential, Element):
     valid_attributes = Element.valid_attributes + ('bullet',)
-    valid_children = list_item  # (list_item+)
+    content_model = ((list_item, '+'),)  # (list_item+)
 
 
 class enumerated_list(Sequential, Element):
     valid_attributes = Element.valid_attributes + (
         'enumtype', 'prefix', 'suffix', 'start')
-    valid_children = list_item  # (list_item+)
+    content_model = ((list_item, '+'),)  # (list_item+)
 
 
 class term(Part, TextElement): pass
@@ -1894,12 +2019,14 @@ class classifier(Part, TextElement): pass
 
 class definition(Part, Element):
     """Definition of a `term` in a `definition_list`."""
-    valid_children = Body  # (%body.elements;)+
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
 
 class definition_list_item(Part, Element):
-    valid_children = (term, classifier, definition)
-    valid_len = (2, None)  # (term, classifier*, definition)
+    content_model = (  # (term, classifier*, definition)
+                     (term, '.'),
+                     (classifier, '*'),
+                     (definition, '.'))
 
 
 class definition_list(Sequential, Element):
@@ -1908,20 +2035,20 @@ class definition_list(Sequential, Element):
     Can be used for glossaries or dictionaries, to describe or
     classify things, for dialogues, or to itemize subtopics.
     """
-    valid_children = definition_list_item  # (definition_list_item+)
+    content_model = ((definition_list_item, '+'),)  # (definition_list_item+)
 
 
 class field_name(Part, TextElement): pass
 
 
 class field_body(Part, Element):
-    valid_children = Body  # (%body.elements;)*
-    valid_len = (0, None)
+    content_model = ((Body, '*'),)  # (%body.elements;)*
 
 
 class field(Part, Bibliographic, Element):
-    valid_children = (field_name, field_body)  # (field_name, field_body)
-    valid_len = (2, 2)
+    content_model = (  # (field_name, field_body)
+                     (field_name, '.'),
+                     (field_body, '.'))
 
 
 class field_list(Sequential, Element):
@@ -1930,7 +2057,7 @@ class field_list(Sequential, Element):
     Typically rendered as a two-column list.
     Also used for extension syntax or special processing.
     """
-    valid_children = field  # (field+)
+    content_model = ((field, '+'),)  # (field+)
 
 
 class option_string(Part, PureTextElement):
@@ -1951,36 +2078,38 @@ class option(Part, Element):
     Groups an option string with zero or more option argument placeholders.
     """
     child_text_separator = ''
-    # content model: (option_string, option_argument*)
-    valid_children = (option_string, option_argument)
+    content_model = (  # (option_string, option_argument*)
+                     (option_string, '.'),
+                     (option_argument, '*'))
 
 
 class option_group(Part, Element):
     """Groups together one or more `option` elements, all synonyms."""
     child_text_separator = ', '
-    valid_children = option  # (option+)
+    content_model = ((option, '+'),)  # (option+)
 
 
 class description(Part, Element):
     """Describtion of a command-line option."""
-    valid_children = Body  # (%body.elements;)+
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
 
 class option_list_item(Part, Element):
     """Container for a pair of `option_group` and `description` elements.
     """
     child_text_separator = '  '
-    valid_children = (option_group, description)  # (option_group, description)
-    valid_len = (2, 2)
+    content_model = (  # (option_group, description)
+                     (option_group, '.'),
+                     (description, '.'))
 
 
 class option_list(Sequential, Element):
     """Two-column list of command-line options and descriptions."""
-    valid_children = option_list_item  # (option_list_item+)
+    content_model = ((option_list_item, '+'),)  # (option_list_item+)
 
 
 # Pre-formatted text blocks
-# =========================
+# -------------------------
 
 class literal_block(General, FixedTextElement): pass
 class doctest_block(General, FixedTextElement): pass
@@ -2001,11 +2130,11 @@ class line_block(General, Element):
     # recursive content model: (line | line_block)+
 
 
-line_block.valid_children = (line, line_block)
+line_block.content_model = (((line, line_block), '+'),)
 
 
 # Admonitions
-# ===========
+# -----------
 # distinctive and self-contained notices
 
 class attention(Admonition, Element): pass
@@ -2020,12 +2149,142 @@ class warning(Admonition, Element): pass
 
 
 class admonition(Admonition, Element):
-    valid_children = (title, Body)  # (title, (%body.elements;)+)
-    valid_len = (2, None)
+    content_model = (  # (title, (%body.elements;)+)
+                     (title, '.'),
+                     (Body, '+'))
 
 
-# Invisible elements
-# ==================
+# Footnote and citation
+# ---------------------
+
+class label(Part, PureTextElement):
+    """Visible identifier for footnotes and citations."""
+
+
+class footnote(General, BackLinkable, Element, Labeled, Targetable):
+    """Labelled note providing additional context (footnote or endnote)."""
+    valid_attributes = Element.valid_attributes + ('auto', 'backrefs')
+    content_model = (  # (label?, (%body.elements;)+)
+                     (label, '?'),
+                     (Body, '+'))
+    # TODO: Why is the label optional and content required?
+    # The rST specification says: "Each footnote consists of an
+    # explicit markup start (".. "), a left square bracket,
+    # the footnote label, a right square bracket, and whitespace,
+    # followed by indented body elements."
+    #
+    # The `Labeled` parent class' docstring says:
+    # "Contains a `label` as its first element."
+    #
+    # docutils.dtd requires both label and content but the rST parser
+    # allows empty footnotes (see test_writers/test_latex2e.py).
+    # Should the rST parser complain (info, warning or error)?
+
+
+class citation(General, BackLinkable, Element, Labeled, Targetable):
+    content_model = (  # (label, (%body.elements;)+)
+                     (label, '.'),
+                     (Body, '+'))
+    # TODO: docutils.dtd requires both label and content but the rST parser
+    # allows empty citation (see test_rst/test_citations.py).
+    # Is this sensible?
+    # The rST specification says: "Citations are identical to footnotes
+    # except that they use only non-numeric labels such as [note] …"
+
+
+# Graphical elements
+# ------------------
+
+class image(General, Inline, Element):
+    """Reference to an image resource.
+
+    May be body element or inline element.
+    """
+    valid_attributes = Element.valid_attributes + (
+        'uri', 'alt', 'align', 'height', 'width', 'scale', 'loading')
+
+    def astext(self):
+        return self.get('alt', '')
+
+
+class caption(Part, TextElement): pass
+
+
+class legend(Part, Element):
+    """A wrapper for text accompanying a `figure` that is not the caption."""
+    content_model = ((Body, '+'),)  # (%body.elements;)+
+
+
+class figure(General, Element):
+    """A formal figure, generally an illustration, with a title."""
+    valid_attributes = Element.valid_attributes + ('align', 'width')
+    content_model = (  # (image, ((caption, legend?) | legend))
+                     (image, '.'),
+                     (caption, '?'),
+                     (legend, '?'))
+    # TODO: According to the DTD, a caption or legend is required
+    # but rST allows "bare" figures which are formatted differently from
+    # images (floating in LaTeX, nested in a <figure> in HTML).
+
+
+# Tables
+# ------
+
+class entry(Part, Element):
+    """An entry in a `row` (a table cell)."""
+    valid_attributes = Element.valid_attributes + (
+        'align', 'char', 'charoff', 'colname', 'colsep', 'morecols',
+        'morerows', 'namest', 'nameend', 'rowsep', 'valign')
+    content_model = ((Body, '*'),)  # %tbl.entry.mdl -> (%body.elements;)*
+
+
+class row(Part, Element):
+    """Row of table cells."""
+    valid_attributes = Element.valid_attributes + ('rowsep', 'valign')
+    content_model = ((entry, '+'),)  # (%tbl.row.mdl;) -> entry+
+
+
+class colspec(Part, Element):
+    """Specifications for a column in a `tgroup`."""
+    valid_attributes = Element.valid_attributes + (
+        'align', 'char', 'charoff', 'colname', 'colnum',
+        'colsep', 'colwidth', 'rowsep', 'stub')
+
+
+class thead(Part, Element):
+    """Row(s) that form the head of a `tgroup`."""
+    valid_attributes = Element.valid_attributes + ('valign',)
+    content_model = ((row, '+'),)  # (row+)
+
+
+class tbody(Part, Element):
+    """Body of a `tgroup`."""
+    valid_attributes = Element.valid_attributes + ('valign',)
+    content_model = ((row, '+'),)  # (row+)
+
+
+class tgroup(Part, Element):
+    """A portion of a table. Most tables have just one `tgroup`."""
+    valid_attributes = Element.valid_attributes + (
+        'align', 'cols', 'colsep', 'rowsep')
+    content_model = (  # (colspec*, thead?, tbody)
+                     (colspec, '*'),
+                     (thead, '?'),
+                     (tbody, '.'))
+
+
+class table(General, Element):
+    """A data arrangement with rows and columns."""
+    valid_attributes = Element.valid_attributes + (
+        'align', 'colsep', 'frame', 'pgwide', 'rowsep', 'width')
+    content_model = (  # (title?, tgroup+)
+                     (title, '?'),
+                     (tgroup, '+'))
+
+
+# Special purpose elements
+# ------------------------
+# Body elements for internal use or special requests.
 
 class comment(Invisible, FixedTextElement, PureTextElement):
     """Author notes, hidden from the output."""
@@ -2040,116 +2299,6 @@ class target(Invisible, Inline, TextElement, Targetable):
         'anonymous', 'refid', 'refname', 'refuri')
 
 
-# Footnote and citation
-# =====================
-
-class label(Part, PureTextElement):
-    """Visible identifier for footnotes and citations."""
-
-
-class footnote(General, BackLinkable, Element, Labeled, Targetable):
-    """Labelled note providing additional context (footnote or endnote)."""
-    valid_attributes = Element.valid_attributes + ('auto', 'backrefs')
-    valid_children = (label, Body)  # (label?, (%body.elements;)+)
-
-
-class citation(General, BackLinkable, Element, Labeled, Targetable):
-    valid_children = (label, Body)  # (label, (%body.elements;)+)
-    valid_len = (2, None)
-    # TODO: DTD requires both label and content but rST allows empty citation
-    #       (see test_rst/test_citations.py).  Is this sensible?
-
-
-# Graphical elements
-# ==================
-
-class image(General, Inline, Element):
-    """Reference to an image resource.
-
-    May be body element or inline element.
-    """
-    valid_attributes = Element.valid_attributes + (
-        'uri', 'alt', 'align', 'height', 'width', 'scale', 'loading')
-    valid_len = (0, 0)  # emtpy element
-
-    def astext(self):
-        return self.get('alt', '')
-
-
-class caption(Part, TextElement): pass
-
-
-class legend(Part, Element):
-    """A wrapper for text accompanying a `figure` that is not the caption."""
-    valid_children = Body  # (%body.elements;)
-
-
-class figure(General, Element):
-    """A formal figure, generally an illustration, with a title."""
-    valid_attributes = Element.valid_attributes + ('align', 'width')
-    # content model: (image, ((caption, legend?) | legend))
-    valid_children = (image, caption, legend)
-    valid_len = (1, 3)
-    # TODO: According to the DTD, a caption or legend is required
-    # but rST allows "bare" figures which are formatted differently from
-    # images (floating in LaTeX, nested in a <figure> in HTML).
-
-
-# Tables
-# ======
-
-class entry(Part, Element):
-    """An entry in a `row` (a table cell)."""
-    valid_attributes = Element.valid_attributes + (
-        'align', 'char', 'charoff', 'colname', 'colsep', 'morecols',
-        'morerows', 'namest', 'nameend', 'rowsep', 'valign')
-    valid_children = Body  # %tbl.entry.mdl -> (%body.elements;)*
-    valid_len = (0, None)  # may be empty
-
-
-class row(Part, Element):
-    """Row of table cells."""
-    valid_attributes = Element.valid_attributes + ('rowsep', 'valign')
-    valid_children = entry  # (%tbl.row.mdl;) -> entry+
-
-
-class colspec(Part, Element):
-    """Specifications for a column in a `tgroup`."""
-    valid_attributes = Element.valid_attributes + (
-        'align', 'char', 'charoff', 'colname', 'colnum',
-        'colsep', 'colwidth', 'rowsep', 'stub')
-    valid_len = (0, 0)  # empty element
-
-
-class thead(Part, Element):
-    """Row(s) that form the head of a `tgroup`."""
-    valid_attributes = Element.valid_attributes + ('valign',)
-    valid_children = row  # (row+)
-
-
-class tbody(Part, Element):
-    """Body of a `tgroup`."""
-    valid_attributes = Element.valid_attributes + ('valign',)
-    valid_children = row  # (row+)
-
-
-class tgroup(Part, Element):
-    """A portion of a table. Most tables have just one `tgroup`."""
-    valid_attributes = Element.valid_attributes + (
-        'align', 'cols', 'colsep', 'rowsep')
-    valid_children = (colspec, thead, tbody)  # (colspec*, thead?, tbody)
-
-
-class table(General, Element):
-    """A data arrangement with rows and columns."""
-    valid_attributes = Element.valid_attributes + (
-        'align', 'colsep', 'frame', 'pgwide', 'rowsep', 'width')
-    valid_children = (title, tgroup)  # (title?, tgroup+)
-
-
-# Special purpose elements
-# ========================
-
 class system_message(Special, BackLinkable, PreBibliographic, Element):
     """
     System message element.
@@ -2159,7 +2308,7 @@ class system_message(Special, BackLinkable, PreBibliographic, Element):
     """
     valid_attributes = BackLinkable.valid_attributes + (
                            'level', 'line', 'type')
-    valid_children = Body  # (%body.elements;)+
+    content_model = ((Body, '+'),)  # (%body.elements;)+
 
     def __init__(self, message=None, *children, **attributes):
         rawsource = attributes.pop('rawsource', '')
@@ -2206,7 +2355,6 @@ class pending(Invisible, Element):
     `docutils.transforms.Transformer` stage of processing can run all pending
     transforms.
     """
-    valid_len = (0, 0)  # empty element
 
     def __init__(self, transform, details=None,
                  rawsource='', *children, **attributes):
@@ -2255,17 +2403,25 @@ class pending(Invisible, Element):
 class raw(Special, Inline, PreBibliographic,
           FixedTextElement, PureTextElement):
     """Raw data that is to be passed untouched to the Writer.
+
+    Can be used as Body element or Inline element.
     """
     valid_attributes = Element.valid_attributes + ('format', 'xml:space')
 
 
-# =================
-#  Inline Elements
-# =================
+# Inline Elements
+# ===============
 
+class abbreviation(Inline, TextElement): pass
+class acronym(Inline, TextElement): pass
 class emphasis(Inline, TextElement): pass
-class strong(Inline, TextElement): pass
+class generated(Inline, TextElement): pass
+class inline(Inline, TextElement): pass
 class literal(Inline, TextElement): pass
+class strong(Inline, TextElement): pass
+class subscript(Inline, TextElement): pass
+class superscript(Inline, TextElement): pass
+class title_reference(Inline, TextElement): pass
 
 
 class reference(General, Inline, Referential, TextElement):
@@ -2285,26 +2441,13 @@ class substitution_reference(Inline, TextElement):
     valid_attributes = Element.valid_attributes + ('refname',)
 
 
-class title_reference(Inline, TextElement): pass
-class abbreviation(Inline, TextElement): pass
-class acronym(Inline, TextElement): pass
-class superscript(Inline, TextElement): pass
-class subscript(Inline, TextElement): pass
-
-
 class math(Inline, PureTextElement):
     """Mathematical notation in running text."""
-
-
-class inline(Inline, TextElement): pass
 
 
 class problematic(Inline, TextElement):
     valid_attributes = Element.valid_attributes + (
                            'refid', 'refname', 'refuri')
-
-
-class generated(Inline, TextElement): pass
 
 
 # ========================================
@@ -2516,6 +2659,16 @@ class TreeCopyVisitor(GenericNodeVisitor):
     def default_departure(self, node):
         """Restore the previous acting parent."""
         self.parent = self.parent_stack.pop()
+
+
+# Custom Exceptions
+# =================
+
+class ValidationError(ValueError):
+    """Invalid Docutils Document Tree Element."""
+    def __init__(self, msg, problematic_element=None):
+        super().__init__(msg)
+        self.problematic_element = problematic_element
 
 
 class TreePruningException(Exception):
