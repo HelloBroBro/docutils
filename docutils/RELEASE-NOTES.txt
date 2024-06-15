@@ -118,18 +118,11 @@ Writers
 
     .. _reference-label: docs/user/config.html#reference-label
 
-* "null" writer: output will change to the empty string
-  in Docutils 0.22.
-
-* "manpage" writer:
-
-  - No more changing case in to uppercase, leave it to the source.
-
 Misc
 ----
 
 * Remove `parsers.rst.directives.CSVTable.HeaderDialect`
-  in Docutils 0.22.
+  in Docutils 1.0.
 
 * Remove support for the `recommonmark parser`_ in Docutils 1.0.
   Recommonmark is unmaintained since 2021 and deprecated in favour
@@ -139,6 +132,9 @@ Misc
   .. _MyST parser: docs/user/config.html#myst-parser
 
 * Remove the input encoding auto-detection code in Docutils 1.0.
+
+* Remove `parsers.rst.roles.set_classes()` and
+  `parsers.rst.roles.normalized_role_options()` in Docutils 1.0.
 
 * Remove the "rawsource" argument from `nodes.Text.__init__()`
   in Docutils 2.0.
@@ -194,15 +190,13 @@ Misc
 Release 0.22b.dev (unpublished)
 ===============================
 
-* Document Tree / Docutils DTD
-
+Document Tree / Docutils DTD
   - Allow multiple <term> elements in a `\<definition_list_item>`__
     (third-party writers may need adaption).
 
   __ docs/ref/doctree.html#definition-list-item
 
-* Configuration changes:
-
+Configuration changes
   - Make MathML the default math_output_ for the "html5" writer.
 
   - Change the default input encoding from ``None`` (auto-detect) to "utf-8".
@@ -211,18 +205,51 @@ Release 0.22b.dev (unpublished)
     Use the long equivalents ``--input-encoding`` and ``--output-encoding``.
     (See `command line interface`_ for the rationale.)
 
-* New parser for `Docutils XML`_ (e.g., the output of the "xml" writer).
-  Provisional.
+Output changes
+  "manpage" writer:
+     Don't UPPERCASE section headings.
 
-  Try ``docutils --parser=xml test/data/multiple-term-definition.xml``
-  or use the :parser: option of the `"include" directive`_ to include
-  an XML file in a rST document.
+  "null" writer:
+     output changed from None to the empty string.
 
-* New method `Element.validate()`: Raise `nodes.ValidationError` if the
-  element does not comply with the `Docutils Document Model`_.
-  Provisional.
+     `publish_string()` now returns a `bytes` or `str` instance
+     for all writers (as documented).
 
-* Bugfixes and improvements (see HISTORY_).
+New objects
+  `parsers.docutils_xml`
+     parser for `Docutils XML`_ (e.g., the output of the "xml" writer).
+     Provisional.
+
+     Try ``docutils --parser=xml test/data/multiple-term-definitions.xml``
+     or use the :parser: option of the `"include" directive`_ to include
+     an XML file in a rST document.
+
+  `nodes.Element.validate()`
+     Raise `nodes.ValidationError` if the element does not comply with
+     the `Docutils Document Model`_.
+     Provisional.
+
+Removed objects
+  `docutils.core.Publisher.setup_option_parser()`
+     internal, obsolete
+  `docutils.nodes.Element.set_class()`
+     Obsolete. Append to Element['classes'] directly.
+  `docutils.parsers.rst.directives.tables.CSVTable.decode_from_csv()`
+     not required with Python 3
+  `docutils.parsers.rst.directives.tables.CSVTable.encode_from_csv()`
+     not required with Python 3
+  `docutils.transforms.writer_aux.Compound`
+     not used since Dec 2010
+  `docutils.utils.error_reporting`
+     obsolete in Python 3
+  `docutils.utils.Reporter.set_conditions()`
+     Obsolete. Set attributes via configuration settings or directly.
+
+Removed files
+  ``tools/rst2odt_prepstyles.py``
+     Obsoleted by `docutils.writers.odf_odt.prepstyles`.
+
+Bugfixes and improvements (see HISTORY_).
 
 .. _Docutils Document Model:
 .. _Docutils XML: docs/ref/doctree.html
@@ -321,8 +348,6 @@ Release 0.21 (2024-04-09)
     Python 2 compatibility hacks
   `docutils.utils.Reporter.set_conditions()`
     obsolete
-  `docutils.core.Publisher.setup_option_parser()`
-    internal, obsolete
 
 * New files:
 
