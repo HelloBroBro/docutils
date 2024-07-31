@@ -22,7 +22,8 @@ import os
 import os.path
 from pathlib import Path
 import re
-import urllib
+import urllib.parse
+import urllib.request
 import warnings
 import xml.etree.ElementTree as ET  # TODO: lazy import in prepare_svg()?
 
@@ -475,7 +476,10 @@ class HTMLTranslator(nodes.NodeVisitor):
             self.messages.append(self.document.reporter.error(
                 f'Cannot parse SVG image "{node["uri"]}":\n  {err}',
                 base_node=node))
-            return imagedata.decode('utf-8')
+            # We initially open the file in binary mode,
+            # meaning universal newlines are not applied.
+            # Manually convert here before decoding.
+            return imagedata.replace(b'\r\n', b'\n').decode('utf-8')
         # apply image node attributes:
         if size_declaration:  # append to style, replacing width & height
             declarations = [d.strip() for d in svg.get('style', '').split(';')]
@@ -628,7 +632,7 @@ class HTMLTranslator(nodes.NodeVisitor):
         if uri_parts.scheme not in ('', 'file'):
             raise ValueError('Can only read local images.')
         imagepath = urllib.request.url2pathname(uri_parts.path)
-        if imagepath.startswith('/'):
+        if imagepath.startswith(('/', '\\')):  # UNIX- or Windows-style
             root_prefix = Path(self.settings.root_prefix)
             imagepath = (root_prefix/imagepath[1:]).as_posix()
         elif not os.path.isabs(imagepath):  # exclude absolute Windows paths
