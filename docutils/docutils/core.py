@@ -13,6 +13,8 @@ custom component objects first, and pass *them* to
     https://docutils.sourceforge.io/docs/api/publisher.html
 """
 
+from __future__ import annotations
+
 __docformat__ = 'reStructuredText'
 
 import locale
@@ -192,17 +194,26 @@ class Publisher:
         if self.destination is None:
             self.set_destination(destination_path=destination_path)
 
-    def set_source(self, source=None, source_path=None):
+    def set_source(
+        self,
+        source: str | None = None,
+        source_path: str | os.PathLike[str] | None = None,
+    ) -> None:
         if source_path is None:
             source_path = self.settings._source
         else:
+            source_path = os.fspath(source_path)
             self.settings._source = source_path
         self.source = self.source_class(
             source=source, source_path=source_path,
             encoding=self.settings.input_encoding,
             error_handler=self.settings.input_encoding_error_handler)
 
-    def set_destination(self, destination=None, destination_path=None):
+    def set_destination(
+        self,
+        destination: str | None = None,
+        destination_path: str | os.PathLike[str] | None = None,
+    ) -> None:
         if destination_path is None:
             if (self.settings.output and self.settings._destination
                 and self.settings.output != self.settings._destination):
@@ -213,6 +224,8 @@ class Publisher:
                 self.settings.output = None
             destination_path = (self.settings.output
                                 or self.settings._destination)
+        else:
+            destination_path = os.fspath(destination_path)
         self.settings._destination = destination_path
         self.destination = self.destination_class(
             destination=destination,
@@ -438,7 +451,7 @@ def publish_file(source=None, source_path=None,
     # The "*_name" arguments are deprecated.
     _name_arg_warning(reader_name, parser_name, writer_name)
     # The default is set in publish_programmatically().
-    output, publisher = publish_programmatically(
+    output, _publisher = publish_programmatically(
         source_class=io.FileInput, source=source, source_path=source_path,
         destination_class=io.FileOutput,
         destination=destination, destination_path=destination_path,
@@ -480,7 +493,7 @@ def publish_string(source, source_path=None, destination_path=None,
     # The "*_name" arguments are deprecated.
     _name_arg_warning(reader_name, parser_name, writer_name)
     # The default is set in publish_programmatically().
-    output, publisher = publish_programmatically(
+    output, _publisher = publish_programmatically(
         source_class=io.StringInput, source=source, source_path=source_path,
         destination_class=io.StringOutput,
         destination=None, destination_path=destination_path,
@@ -521,7 +534,7 @@ def publish_parts(source, source_path=None, source_class=io.StringInput,
     # The "*_name" arguments are deprecated.
     _name_arg_warning(reader_name, parser_name, writer_name)
     # The default is set in publish_programmatically().
-    output, publisher = publish_programmatically(
+    _output, publisher = publish_programmatically(
         source=source, source_path=source_path, source_class=source_class,
         destination_class=io.StringOutput,
         destination=None, destination_path=destination_path,

@@ -46,7 +46,7 @@ __docformat__ = 'reStructuredText'
 import re
 
 import docutils
-from docutils import nodes, writers, languages
+from docutils import frontend, nodes, writers, languages
 try:
     import roman
 except ImportError:
@@ -116,7 +116,16 @@ class Writer(writers.Writer):
     supported = ('manpage',)
     """Formats this writer supports."""
 
-    # manpage writer specfic settings. not yet
+    settings_spec = (
+        'Manpage-Specific Options',
+        None,
+        (('Use man macros .UR/.UE and .MT/.ME for references '
+          'or put references in plain text form.',
+          ['--use-reference-macros'],
+          {'default': False, 'action': 'store_true',
+           'validator': frontend.validate_boolean}),
+         ),
+        )
 
     output = None
     """Final translated form of `document`."""
@@ -203,6 +212,12 @@ class Translator(nodes.NodeVisitor):
     def __init__(self, document):
         nodes.NodeVisitor.__init__(self, document)
         self.settings = settings = document.settings
+        if settings.use_reference_macros:
+            self.visit_reference = self._visit_reference_with_macro
+            self.depart_reference = self._depart_reference_with_macro
+        else:
+            self.visit_reference = self._visit_reference_no_macro
+            self.depart_reference = self._depart_reference_no_macro
         lcode = settings.language_code
         self.language = languages.get_language(lcode, document.reporter)
         self.head = []
@@ -747,7 +762,7 @@ class Translator(nodes.NodeVisitor):
         pass
 
     def visit_footnote(self, node):
-        num, text = node.astext().split(None, 1)
+        num, _text = node.astext().split(maxsplit=1)
         num = num.strip()
         self.body.append('.IP [%s] 5\n' % self.deunicode(num))
 
@@ -1041,18 +1056,22 @@ class Translator(nodes.NodeVisitor):
         # Keep non-manpage raw text out of output:
         raise nodes.SkipNode
 
-    def visit_reference(self, node):
+    # references ----
+
+    def _visit_reference_no_macro(self, node):
         """E.g. link or email address."""
         # For .UR/.UE and .MT/.ME macros groff might use OSC8 escape sequences
         # which are not supported everywhere yet
         # therefore make the markup ourself
+
+        # TODO insert_URI_breakpoints in text or refuri
         if 'refuri' in node:
             # if content has the "email" do not output "mailto:email"
             if node['refuri'].endswith(node.astext()):
                 self.body.append(" <")
         # TODO elif 'refid' in node:
 
-    def depart_reference(self, node):
+    def _depart_reference_no_macro(self, node):
         if 'refuri' in node:
             # if content has the "email" do not output "mailto:email"
             if node['refuri'].endswith(node.astext()):
@@ -1060,6 +1079,20 @@ class Translator(nodes.NodeVisitor):
             else:
                 self.body.append(" <%s>\n" % node['refuri'])
         # TODO elif 'refid' in node:
+
+    def _visit_reference_with_macro(self, node):
+        # use UR/UE or MT/ME not yet
+        # TODO insert_URI_breakpoints in text or refuri
+        self.ensure_eol()
+        self.body.append(".UR ")
+        if 'refuri' in node:
+            if not node['refuri'].endswith(node.astext()):
+                self.body.append("%s\n" % node['refuri'])
+
+    def _depart_reference_with_macro(self, node):
+        self.ensure_eol()
+        self.body.append(".UE\n")
+    # ----
 
     def visit_revision(self, node):
         self.visit_docinfo_item(node, 'revision')
