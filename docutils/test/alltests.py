@@ -12,7 +12,7 @@ __doc__ = """\
 All modules named 'test_*.py' in the current directory, and recursively in
 subdirectories (packages) called 'test_*', are loaded and test suites within
 are run.
-"""
+"""  # NoQA: A001
 
 import atexit
 import platform
@@ -41,6 +41,8 @@ if TYPE_CHECKING:
         types.TracebackType,
     ]
 
+STDOUT = sys.__stdout__
+
 
 class Tee:
     """Write to a file and stdout simultaneously."""
@@ -49,9 +51,8 @@ class Tee:
         self.file: TextIO | None = open(
             filename, 'w', encoding='utf-8', errors='backslashreplace',
         )
+        self.encoding: str = 'utf-8'
         atexit.register(self.close)
-        self.stream = sys.__stdout__
-        self.encoding: str = sys.__stdout__.encoding
 
     def close(self) -> None:
         if self.file is not None:
@@ -60,15 +61,15 @@ class Tee:
 
     def write(self, string: str) -> None:
         try:
-            self.stream.write(string)
+            STDOUT.write(string)
         except UnicodeEncodeError:
-            bstring = string.encode(self.encoding, errors='backslashreplace')
-            self.stream.write(bstring.decode())
+            bstring = string.encode(STDOUT.encoding, errors='backslashreplace')
+            STDOUT.buffer.write(bstring)
         if self.file is not None:
             self.file.write(string)
 
     def flush(self) -> None:
-        self.stream.flush()
+        STDOUT.flush()
         if self.file is not None:
             self.file.flush()
 

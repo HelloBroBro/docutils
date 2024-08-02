@@ -35,7 +35,8 @@ except ImportError:
     import sys
     import types
 
-    class pending_xref(nodes.Inline, nodes.Element): ... # NoQA
+    class pending_xref(nodes.Inline, nodes.Element):
+        ...
 
     sys.modules['sphinx'] = sphinx = types.ModuleType('sphinx')
     sphinx.addnodes = addnodes = types.SimpleNamespace()
@@ -100,7 +101,7 @@ class Parser(CommonMarkParser):
     # Post-Processing
     # ---------------
 
-    def finish_parse(self):
+    def finish_parse(self) -> None:
         """Finalize parse details.  Call at end of `self.parse()`."""
 
         document = self.document
@@ -157,14 +158,13 @@ class Parser(CommonMarkParser):
         # now we are ready to call the upstream function:
         super().finish_parse()
 
-    def visit_document(self, node):
+    def visit_document(self, node) -> None:
         """Dummy function to prevent spurious warnings.
 
         cf. https://github.com/readthedocs/recommonmark/issues/177
         """
-        pass
 
     # Overwrite parent method with version that
     # doesn't pass deprecated `rawsource` argument to nodes.Text:
-    def visit_text(self, mdnode):
+    def visit_text(self, mdnode) -> None:
         self.current_node.append(nodes.Text(mdnode.literal))

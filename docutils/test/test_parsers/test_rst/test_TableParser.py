@@ -23,8 +23,8 @@ from docutils.statemachine import StringList, string2lines
 class GridTableParserTestCase(unittest.TestCase):
     def test_parse_table(self):
         parser = tableparser.GridTableParser()
-        for name, cases in totest.items():
-            for casenum, case in enumerate(cases):
+        for cases in totest.values():
+            for case in cases:
                 case_input, case_table, _case_expected = case
                 lines_input = StringList(string2lines(case_input), 'test data')
                 parser.setup(lines_input)

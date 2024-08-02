@@ -5,9 +5,30 @@ output-format = "full"
 [lint]
 preview = true
 select = [
-    "E",  # pycodestyle
-    "F",  # pyflakes
-    "W",  # pycodestyle
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "E",    # pycodestyle
+    "EXE",  # flake8-executable
+    "DTZ",  # flake8-datetimez
+    "F",    # pyflakes
+    "FA",   # flake8-future-annotations
+    "FURB", # refurb
+    "G",    # flake8-logging-format
+    "ICN",  # flake8-import-conventions
+    "INP",  # flake8-no-pep420
+    "INT",  # flake8-gettext
+    "LOG",  # flake8-logging
+    "PERF", # perflint
+    "PGH",  # pygrep-hooks
+    "PIE",  # flake8-pie
+    "PT",   # flake8-pytest
+    "RSE",  # flake8-raise
+    "SLOT", # flake8-slots
+    "T10",  # flake8-debugger
+    "TCH",  # flake8-type-checking
+    "TID",  # flake8-tidy-imports
+    "W",    # pycodestyle
+    "YTT",  # flake8-2020
 ]
 ignore = [
     "E226",  # missing whitespace around arithmetic operator
@@ -16,6 +37,13 @@ ignore = [
     # "If operators with different priorities are used, consider adding
     # whitespace around the operators with the lowest priority(ies).
     # Use your own judgment; …"
+
+    "PERF203",  # ``try``-``except`` within a loop incurs performance overhead
+    # Needs more thought.
+
+    "PT009",  # Use a regular assert instead of unittest-style
+    "PT027",  # Use pytest.raises instead of unittest-style
+    # We still use unittest.
 ]
 
 [lint.per-file-ignores]
@@ -55,6 +83,8 @@ ignore = [
 
 # module with 3rd-party origin
 "docutils/utils/math/math2html.py" = [
+    "A001",  # 'type' is used very frequently
+    "A002",  # 'type' is used very frequently
     "E241",
     "E501",
     "E731",
@@ -102,9 +132,15 @@ ignore = [
     "F841",
 ]
 
+# shebang to enable unbuffered mode
+"test/alltests.py" = [
+    "EXE003",
+]
+
 # included configuration files referencing externally defined variables
 "test/functional/tests/*" = [
     "F821",
+    "INP001",
 ]
 
 # deprecated module, will be removed
@@ -140,4 +176,10 @@ ignore = [
 # ignore long line in string templates
 "tools/dev/generate_punctuation_chars.py" = [
     "E501",
+]
+
+[lint.flake8-builtins]
+builtins-ignorelist = [
+    "format",
+    "id",
 ]

@@ -115,41 +115,41 @@ class InputTests(unittest.TestCase):
         # default input encoding will change to UTF-8 in Docutils 0.22
         source = '\ufeffdata\n\ufeff blah\n'
         expected = 'data\n\ufeff blah\n'  # only leading ZWNBSP removed
-        input = du_io.StringInput(source=source.encode('utf-16-be'),
-                                  encoding=None)
-        self.assertEqual(expected, input.read())
-        input = du_io.StringInput(source=source.encode('utf-16-le'),
-                                  encoding=None)
-        self.assertEqual(expected, input.read())
-        input = du_io.StringInput(source=source.encode('utf-8'),
-                                  encoding=None)
-        self.assertEqual(expected, input.read())
+        input_ = du_io.StringInput(source=source.encode('utf-16-be'),
+                                   encoding=None)
+        self.assertEqual(expected, input_.read())
+        input_ = du_io.StringInput(source=source.encode('utf-16-le'),
+                                   encoding=None)
+        self.assertEqual(expected, input_.read())
+        input_ = du_io.StringInput(source=source.encode('utf-8'),
+                                   encoding=None)
+        self.assertEqual(expected, input_.read())
         # With `str` input all ZWNBSPs are still there.
-        input = du_io.StringInput(source=source)
-        self.assertEqual(source, input.read())
+        input_ = du_io.StringInput(source=source)
+        self.assertEqual(source, input_.read())
 
     def test_encoding_declaration(self):
-        input = du_io.StringInput(source=b"""\
+        input_ = du_io.StringInput(source=b"""\
 .. -*- coding: ascii -*-
 data
 blah
 """, encoding=None)
-        data = input.read()  # noqa: F841
-        self.assertEqual('ascii', input.successful_encoding)
-        input = du_io.StringInput(source=b"""\
+        data = input_.read()  # noqa: F841
+        self.assertEqual('ascii', input_.successful_encoding)
+        input_ = du_io.StringInput(source=b"""\
 #! python
 # -*- coding: ascii -*-
 print("hello world")
 """, encoding=None)
-        data = input.read()  # noqa: F841
-        self.assertEqual('ascii', input.successful_encoding)
-        input = du_io.StringInput(source=b"""\
+        data = input_.read()  # noqa: F841
+        self.assertEqual('ascii', input_.successful_encoding)
+        input_ = du_io.StringInput(source=b"""\
 #! python
 # extraneous comment; prevents coding slug from being read
 # -*- coding: ascii -*-
 print("hello world")
 """)
-        self.assertNotEqual(input.successful_encoding, 'ascii')
+        self.assertNotEqual(input_.successful_encoding, 'ascii')
 
     def test_decode_unicode(self):
         # With the special value "unicode" or "Unicode":
@@ -305,8 +305,12 @@ class FileInputTests(unittest.TestCase):
 
     def test_fallback_utf8(self):
         """Try 'utf-8', if encoding is not specified in the source."""
-        source = du_io.FileInput(
-            source_path=os.path.join(DATA_ROOT, 'utf8.txt'))
+        with warnings.catch_warnings():
+            if SUPPRESS_ENCODING_WARNING:
+                warnings.filterwarnings('ignore', category=EncodingWarning)
+            source = du_io.FileInput(
+                source_path=os.path.join(DATA_ROOT, 'utf8.txt'),
+                encoding=None)
         self.assertEqual('Grüße\n', source.read())
 
     @unittest.skipIf(preferredencoding in (None, 'ascii', 'utf-8'),
@@ -316,8 +320,12 @@ class FileInputTests(unittest.TestCase):
         # use the locale's preferred encoding (if not None).
         # Provisional: the default will become 'utf-8'
         # (without auto-detection and fallback) in Docutils 0.22.
-        source = du_io.FileInput(
-            source_path=os.path.join(DATA_ROOT, 'latin1.txt'))
+        with warnings.catch_warnings():
+            if SUPPRESS_ENCODING_WARNING:
+                warnings.filterwarnings('ignore', category=EncodingWarning)
+            source = du_io.FileInput(
+                source_path=os.path.join(DATA_ROOT, 'latin1.txt'),
+                encoding=None)
         data = source.read()
         successful_encoding = codecs.lookup(source.successful_encoding).name
         self.assertEqual(preferredencoding, successful_encoding)

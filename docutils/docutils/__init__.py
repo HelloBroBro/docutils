@@ -104,6 +104,8 @@ For development and release status, use `__version__ and `__version_info__`.
 
 class VersionInfo(namedtuple('VersionInfo',
                              'major minor micro releaselevel serial release')):
+    __slots__ = ()
+
     major: int
     minor: int
     micro: int
@@ -125,7 +127,7 @@ class VersionInfo(namedtuple('VersionInfo',
                 raise ValueError('releaselevel "final" must not be used '
                                  'with development versions (leads to wrong '
                                  'version ordering of the related __version__')
-                # cf. https://peps.python.org/pep-0440/#summary-of-permitted-suffixes-and-relative-ordering  # noqa
+                # cf. https://peps.python.org/pep-0440/#summary-of-permitted-suffixes-and-relative-ordering  # NoQA: E501
             if serial != 0:
                 raise ValueError('"serial" must be 0 for final releases')
 
