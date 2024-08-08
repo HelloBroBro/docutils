@@ -18,9 +18,9 @@ ignore =
   # E129: "visually indented line with same indent as next logical line"
   # allowed by PEP8
 
-  E226,
-  E228,
+  E226, E227, E228,
   # E226: "missing whitespace around arithmetic operator"
+  # E227: "missing whitespace around bitwise or shift operator"
   # E228: "missing whitespace around modulo operator"
   # not generally frowned on by PEP8:
   # "If operators with different priorities are used, consider adding
@@ -73,9 +73,6 @@ per-file-ignores =
   docutils/test/test_writers/*:E122,E124,E128,E501
   # test output contains trailing whitespace, long lines, operator at end
   docutils/test/test_writers/test_manpage.py:E128,W291,E501,W504
-
-  # ignore long line in string templates
-  docutils/tools/dev/generate_punctuation_chars.py:E501
 
 exclude =
   .venv
