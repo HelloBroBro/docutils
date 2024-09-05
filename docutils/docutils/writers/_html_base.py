@@ -14,18 +14,23 @@
 #
 # .. _2-Clause BSD license: https://opensource.org/licenses/BSD-2-Clause
 
-"""common definitions for Docutils HTML writers"""
+"""Common definitions for Docutils HTML writers."""
+
+from __future__ import annotations
+
+__docformat__ = 'reStructuredText'
 
 import base64
 import mimetypes
 import os
 import os.path
-from pathlib import Path
 import re
 import urllib.parse
 import urllib.request
 import warnings
-import xml.etree.ElementTree as ET  # TODO: lazy import in prepare_svg()?
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import docutils
 from docutils import frontend, languages, nodes, utils, writers
@@ -34,6 +39,10 @@ from docutils.parsers.rst.directives.images import PIL
 from docutils.transforms import writer_aux
 from docutils.utils.math import (latex2mathml, math2html, tex2mathml_extern,
                                  unichar2tex, wrap_math_code, MathError)
+
+
+if TYPE_CHECKING:
+    from numbers import Real
 
 
 class Writer(writers.Writer):
@@ -404,91 +413,97 @@ class HTMLTranslator(nodes.NodeVisitor):
         text = str(text)
         return text.translate(self.special_characters)
 
-    def image_size(self, node):
-        # Determine the image size from the node arguments or the image file.
-        # Return a size declaration suitable as "style" argument value,
-        # e.g., ``'width: 4px; height: 2em;'``.
-        # TODO: consider feature-request #102?
-        size = [node.get('width', None), node.get('height', None)]
-        if 'scale' in node:
-            if 'width' not in node or 'height' not in node:
-                # try reading size from image file
-                reading_problems = []
-                uri = node['uri']
-                if not PIL:
-                    reading_problems.append('Requires Python Imaging Library.')
-                if mimetypes.guess_type(uri)[0] in self.videotypes:
-                    reading_problems.append('PIL cannot read video images.')
-                if not self.settings.file_insertion_enabled:
-                    reading_problems.append('Reading external files disabled.')
-                if not reading_problems:
-                    try:
-                        imagepath = self.uri2imagepath(uri)
-                        with PIL.Image.open(imagepath) as img:
-                            imgsize = img.size
-                    except (ValueError, OSError, UnicodeEncodeError) as err:
-                        reading_problems.append(str(err))
-                    else:
-                        self.settings.record_dependencies.add(
-                            imagepath.replace('\\', '/'))
-                if reading_problems:
-                    msg = ['Cannot scale image!',
-                           f'Could not get size from "{uri}":',
-                           *reading_problems]
-                    self.messages.append(self.document.reporter.warning(
-                        '\n  '.join(msg), base_node=node))
-                else:
-                    for i in range(2):
-                        size[i] = size[i] or '%dpx' % imgsize[i]
-            # scale provided/determined size values:
-            factor = float(node['scale']) / 100
-            for i in range(2):
-                if size[i]:
-                    match = re.match(r'([0-9.]+)(\S*)$', size[i])
-                    size[i] = '%s%s' % (factor * float(match.group(1)),
-                                        match.group(2))
-        size_declarations = []
-        for i, dimension in enumerate(('width', 'height')):
-            if size[i]:
-                # Interpret unitless values as pixels:
-                if re.match(r'^[0-9.]+$', size[i]):
-                    size[i] += 'px'
-                size_declarations.append(f'{dimension}: {size[i]};')
-        return ' '.join(size_declarations)
+    def image_size(self, node: nodes.image) -> str:
+        """Determine the image size from node arguments or the image file.
 
-    def prepare_svg(self, node, imagedata, size_declaration):
-        # Edit `imagedata` for embedding as SVG image.
-        # Use ElementTree to add node attributes.
-        # ET also removes comments and preamble code.
+        Auxiliary method called from `self.visit_image()`.
+
+        Provisional.
+        """
+        # TODO: Use "width" and "hight" for unitless integers?
+        #       [feature-requests:#102]
+
+        # List with optional width and height measures ((value, unit)-tuples)
+        measures: list[tuple[Real, str] | None] = [None, None]
+        dimensions = ('width', 'height')
+        for i, dimension in enumerate(dimensions):
+            if dimension in node:
+                measures[i] = nodes.parse_measure(node[dimension])
+        if None in measures and 'scale' in node:
+            # supplement with (unitless) values read from image file
+            imgsize = self.read_size_with_PIL(node)
+            if imgsize:
+                measures = [measure or (imgvalue, '')
+                            for measure, imgvalue in zip(measures, imgsize)]
+        # scale values
+        factor = node.get('scale', 100) / 100  # scaling factor
+        if factor != 1:
+            measures = [(measure[0] * factor, measure[1])
+                        for measure in measures if measure]
+        # format as CSS declarations and return
+        return ' '.join(f'{dimension}: {measure[0]:g}{measure[1] or "px"};'
+                        for dimension, measure in zip(dimensions, measures)
+                        if measure)
+
+    def read_size_with_PIL(self, node) -> tuple[int, int] | None:
+        # Try reading size from image file.
+        # Internal auxiliary method called from `self.image_size()`.
+        reading_problems = []
+        uri = node['uri']
+        if not PIL:
+            reading_problems.append('Requires Python Imaging Library.')
+        if mimetypes.guess_type(uri)[0] in self.videotypes:
+            reading_problems.append('PIL cannot read video images.')
+        if not self.settings.file_insertion_enabled:
+            reading_problems.append('Reading external files disabled.')
+        if not reading_problems:
+            try:
+                imagepath = self.uri2imagepath(uri)
+                with PIL.Image.open(imagepath) as img:
+                    imgsize = img.size
+            except (ValueError, OSError, UnicodeEncodeError) as err:
+                reading_problems.append(str(err))
+            else:
+                self.settings.record_dependencies.add(imagepath)
+        if reading_problems:
+            msg = ['Cannot scale image!',
+                   f'Could not get size from "{uri}":',
+                   *reading_problems]
+            self.messages.append(self.document.reporter.warning(
+                                     '\n  '.join(msg), base_node=node))
+            return None
+        return imgsize
+
+    def prepare_svg(self, code: str, node: nodes.Element, atts: dict) -> str:
+        # Parse SVG source `code` (ignoring comments and preamble code),
+        # add relevant attributes from `node` and `atts` to the root element.
         #
-        # Internal: interface and behaviour may change without notice.
-
-        # SVG namespace
+        # Internal auxiliary method called from `self.visit_image()`.
         svg_ns = {'': 'http://www.w3.org/2000/svg',
-                  'xlink': 'http://www.w3.org/1999/xlink'}
+                  'xlink': 'http://www.w3.org/1999/xlink'}  # SVG namespace
         # don't add SVG namespace to all elements
-        ET.register_namespace('', svg_ns[''])
-        ET.register_namespace('xlink', svg_ns['xlink'])
+        for key, value in svg_ns.items():
+            ET.register_namespace(key, value)
+        # Parse:
         try:
-            svg = ET.fromstring(imagedata)
+            svg = ET.fromstring(code)
         except ET.ParseError as err:
             self.messages.append(self.document.reporter.error(
                 f'Cannot parse SVG image "{node["uri"]}":\n  {err}',
                 base_node=node))
-            return imagedata
-        # apply image node attributes:
-        if size_declaration:  # append to style, replacing width & height
-            declarations = [d.strip() for d in svg.get('style', '').split(';')]
-            declarations = [d for d in declarations
-                            if d
-                            and not d.startswith('width')
-                            and not d.startswith('height')]
-            svg.set('style', '; '.join(declarations+[size_declaration]))
-        if node['classes'] or 'align' in node:
+            return code
+        # Apply image node attributes:
+        if 'style' in atts:
+            # update style declarations
+            style_att = f"{svg.get('style', '')}; {atts['style']}"
+            style_att = [d.partition(':') for d in style_att.split(';')
+                         if d.strip()]
+            style_att = dict((k.strip(), v.strip()) for k, p, v in style_att)
+            style_att = ' '.join(f'{k}: {v};' for k, v in style_att.items())
+            svg.set('style', style_att)
+        if 'classes' in atts or node['classes']:
             classes = svg.get('class', '').split()
-            classes += node.get('classes', [])
-            if 'align' in node:
-                classes.append(f'align-{node["align"]}')
+            classes += node['classes'] + atts.get('classes', [])
             svg.set('class', ' '.join(classes))
         if 'alt' in node and svg.find('title', svg_ns) is None:
             svg_title = ET.Element('title')
@@ -580,7 +595,7 @@ class HTMLTranslator(nodes.NodeVisitor):
             infix = ' /'
         else:
             infix = ''
-        return ''.join(prefix) + '<%s%s>' % (' '.join(parts), infix) + suffix
+        return f"{''.join(prefix)}<{' '.join(parts)}{infix}>{suffix}"
 
     def emptytag(self, node, tagname, suffix='\n', **attributes):
         """Construct and return an XML-compatible empty tag."""
@@ -607,7 +622,7 @@ class HTMLTranslator(nodes.NodeVisitor):
         child['classes'].append(class_)
 
     def uri2imagepath(self, uri):
-        """Get filesystem path corresponding to an URI.
+        """Get POSIX filesystem path corresponding to an URI.
 
         The image directive expects an image URI__. Some writers require the
         corresponding image path to read the image size from the file or to
@@ -1155,14 +1170,11 @@ class HTMLTranslator(nodes.NodeVisitor):
         mimetype = mimetypes.guess_type(uri)[0]
         element = ''  # the HTML element (including potential children)
         atts = {}  # attributes for the HTML tag
-        # alignment is handled by CSS rules
-        if 'align' in node:
-            atts['class'] = 'align-%s' % node['align']
-        # set size with "style" attribute (more universal, accepts dimensions)
         size_declaration = self.image_size(node)
         if size_declaration:
             atts['style'] = size_declaration
-
+        if 'align' in node:
+            atts['classes'] = [f"align-{node['align']}"]
         # ``:loading:`` option (embed, link, lazy), default from setting,
         # exception: only embed videos if told via directive option
         loading = 'link' if mimetype in self.videotypes else self.image_loading
@@ -1183,8 +1195,7 @@ class HTMLTranslator(nodes.NodeVisitor):
             else:
                 self.settings.record_dependencies.add(imagepath)
                 if mimetype == 'image/svg+xml':
-                    element = self.prepare_svg(node, imagedata,
-                                               size_declaration)
+                    element = self.prepare_svg(imagedata, node, atts)
                 else:
                     data64 = base64.b64encode(imagedata).decode()
                     uri = f'data:{mimetype};base64,{data64}'
@@ -1830,6 +1841,9 @@ class SimpleListChecker(nodes.GenericNodeVisitor):
 
     def default_visit(self, node):
         raise nodes.NodeFound
+
+    def default_departure(self, node):
+        pass
 
     def visit_list_item(self, node):
         children = [child for child in node.children

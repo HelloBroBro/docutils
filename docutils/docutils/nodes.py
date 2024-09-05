@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 class Node:
     """Abstract base class of nodes in a document tree."""
 
-    parent: Node = None
+    parent: Element | None = None
     """Back-reference to the Node immediately containing this Node."""
 
     children: Sequence[Node] = ()
@@ -396,6 +396,15 @@ class Node:
         """Raise ValidationError if this node is not valid.
 
         Override in subclasses that define validity constraints.
+        """
+
+    def validate_position(self) -> None:
+        """Hook for additional checks of the parent's content model.
+
+        Raise ValidationError, if `self` is at an invalid position.
+
+        Override in subclasses with complex validity constraints. See
+        `subtitle.validate_position()` and `transition.validate_position()`.
         """
 
 
@@ -1120,10 +1129,7 @@ class Element(Node):
     def clear(self) -> None:
         self.children = []
 
-    def replace(self,
-                old: Node,
-                new: Node | Iterable[Node],
-                ) -> None:
+    def replace(self, old: Node, new: Node | Iterable[Node]) -> None:
         """Replace one child `Node` with another child or children."""
         index = self.index(old)
         if isinstance(new, Node):
@@ -1318,10 +1324,7 @@ class Element(Node):
                     continue  # try same child with next part of content model
             else:
                 # Check additional placement constraints (if applicable):
-                try:
-                    child.check_position()
-                except AttributeError:
-                    pass
+                child.validate_position()
             # advance:
             if quantifier in ('.', '?'):  # go to next element
                 child = next(ichildren, None)
@@ -1330,7 +1333,7 @@ class Element(Node):
                     if not isinstance(child, category):
                         break
                     try:
-                        child.check_position()
+                        child.validate_position()
                     except AttributeError:
                         pass
                 else:
@@ -1354,13 +1357,6 @@ class Element(Node):
                     f'not text data "{child.astext()}".')
         return (f'{msg}  Expecting child of type <{_type}>, '
                 f'not {child.starttag()}.')
-
-    def check_position(self) -> None:
-        """Hook for additional checks of the parent's content model.
-
-        Raise ValidationError, if `self` is at an invalid position.
-        See `subtitle.check_position()` and `transition.check_position()`.
-        """
 
     def validate(self, recursive: bool = True) -> None:
         """Validate Docutils Document Tree element ("doctree").
@@ -1601,7 +1597,7 @@ class title(Titular, PreBibliographic, SubStructural, TextElement):
 class subtitle(Titular, PreBibliographic, SubStructural, TextElement):
     """Sub-title of `document`, `section` and `sidebar`."""
 
-    def check_position(self) -> None:
+    def validate_position(self) -> None:
         """Check position of subtitle: must follow a title."""
         if self.parent and self.parent.index(self) == 0:
             raise ValidationError(f'Element {self.parent.starttag()} invalid:'
@@ -1645,7 +1641,7 @@ class transition(SubStructural, Element):
     __ https://docutils.sourceforge.io/docs/ref/doctree.html#transition
     """
 
-    def check_position(self) -> None:
+    def validate_position(self) -> None:
         """Check additional constraints on `transition` placement.
 
         A transition may not begin or end a section or document,
@@ -1697,7 +1693,7 @@ class sidebar(Structural, Element):
                             ((topic, Body), '+'),
                             )
     # ((title, subtitle?)?, (%body.elements; | topic)+)
-    # "subtitle only after title" is ensured in `subtitle.check_position()`.
+    # "subtitle only after title" is ensured in `subtitle.validate_position()`.
 
 
 class section(Structural, Element):
@@ -1714,7 +1710,7 @@ section.content_model = ((title, '.'),
                          ((section, transition), '*'),
                          )
 # (title, subtitle?, %structure.model;)
-# Correct transition placement is ensured in `transition.check_position()`.
+# Correct transition placement is ensured in `transition.validate_position()`.
 
 
 # Root Element
@@ -1743,7 +1739,7 @@ class document(Root, Element):
     #    (docinfo, transition?)?,
     #    %structure.model; )
     # Additional restrictions for `subtitle` and `transition` are tested
-    # with the respective `check_position()` methods.
+    # with the respective `validate_position()` methods.
 
     def __init__(self,
                  settings: Values,
@@ -3078,6 +3074,22 @@ def pseudo_quoteattr(value: str) -> str:
     return '"%s"' % value
 
 
+def parse_measure(measure: str) -> tuple[float, str]:
+    """Parse a measure__, return value + optional unit.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#measure
+
+    Provisional.
+    """
+    match = re.fullmatch('(-?[0-9.]+) *([a-zA-Zµ]*|%?)', measure)
+    try:
+        value = float(match.group(1))
+        unit = match.group(2)
+    except (AttributeError, ValueError):
+        raise ValueError(f'"{measure}" is no valid measure.')
+    return value, unit
+
+
 # Methods to validate `Element attribute`__ values.
 
 # Ensure the expected Python `data type`__, normalize, and check for
@@ -3143,24 +3155,25 @@ def validate_identifier_list(value: str | list[str]) -> list[str]:
     return value
 
 
-def validate_measure(value: str) -> str:
+def validate_measure(measure: str) -> str:
     """
-    Validate a length measure__ (number + recognized unit).
+    Validate a measure__ (number + optional unit).  Return normalized `str`.
 
-    __ https://docutils.sourceforge.io/docs/ref/doctree.html#measure
+    See `parse_measure()` for a function returning a "number + unit" tuple.
+
+    The unit may be any run of letters or a percent sign.
 
     Provisional.
+
+    __ https://docutils.sourceforge.io/docs/ref/doctree.html#measure
     """
-    units = 'em|ex|px|in|cm|mm|pt|pc|%'
-    if not re.fullmatch(f'[-0-9.]+ *({units}?)', value):
-        raise ValueError(f'"{value}" is no valid measure. '
-                         f'Valid units: {units.replace("|", " ")}.')
-    return value.replace(' ', '').strip()
+    value, unit = parse_measure(measure)
+    return f'{value:g}{unit}'
 
 
 def validate_NMTOKEN(value: str) -> str:
     """
-    Validate a "name token": a `str` of letters, digits, and [-._].
+    Validate a "name token": a `str` of ASCII letters, digits, and [-._].
 
     Provisional.
     """
