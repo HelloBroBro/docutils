@@ -21,6 +21,7 @@ if __name__ == '__main__':
 
 import docutils
 import docutils.core
+from docutils.parsers.rst.directives.images import PIL
 from docutils.utils.code_analyzer import with_pygments
 from docutils.writers import html4css1
 
@@ -36,6 +37,11 @@ TEST_ROOT = Path(__file__).parents[1]
 DATA_ROOT = TEST_ROOT / 'data'
 ROOT_PREFIX = (TEST_ROOT / 'functional/input').as_posix()
 
+# Pillow/PIL is optional:
+if PIL:
+    SCALING_OUTPUT = 'style="width: 32px; height: 32px;" '
+else:
+    SCALING_OUTPUT = ''
 
 class Html5WriterPublishPartsTestCase(unittest.TestCase):
     """Test case for HTML5 writer via the publish_parts() interface."""
@@ -416,8 +422,8 @@ totest['root_prefix'] = ({'root_prefix': ROOT_PREFIX,
    :scale: 100%
 .. figure:: /data/blue%20square.png
 """,
-"""\
-<img alt="/data/blue%20square.png" src="/data/blue%20square.png" style="width: 32.0px; height: 32.0px;" />
+f"""\
+<img alt="/data/blue%20square.png" src="/data/blue%20square.png" {SCALING_OUTPUT}/>
 <div class="figure">
 <img alt="/data/blue%20square.png" src="/data/blue%20square.png" />
 </div>
@@ -517,8 +523,8 @@ totest['system_messages'] = ({'math_output': 'mathml',
 .. image:: {DATA_ROOT.as_uri()}/circle-broken.svg
    :loading: embed
 """,
-"""\
-<object data="file:///usr/local/src/docutils-git-svn/docutils/test/data/circle-broken.svg" type="image/svg+xml">file:///usr/local/src/docutils-git-svn/docutils/test/data/circle-broken.svg</object>
+f"""\
+<object data="{DATA_ROOT.as_uri()}/circle-broken.svg" type="image/svg+xml">{DATA_ROOT.as_uri()}/circle-broken.svg</object>
 """
 ],
 [r"""Broken :math:`\sin \my`.
@@ -583,8 +589,8 @@ totest['no_system_messages'] = ({'math_output': 'mathml',
 .. image:: {DATA_ROOT.as_uri()}/circle-broken.svg
    :loading: embed
 """,
-"""\
-<object data="file:///usr/local/src/docutils-git-svn/docutils/test/data/circle-broken.svg" type="image/svg+xml">file:///usr/local/src/docutils-git-svn/docutils/test/data/circle-broken.svg</object>
+f"""\
+<object data="{DATA_ROOT.as_uri()}/circle-broken.svg" type="image/svg+xml">{DATA_ROOT.as_uri()}/circle-broken.svg</object>
 """],
 [r'Broken :math:`\sin \my`.',
 '<p>Broken <tt class="math">\\sin \\my</tt>.</p>\n'
