@@ -490,9 +490,15 @@ class Babel:
 class SortableDict(dict):
     """Dictionary with additional sorting methods
 
-    Tip: use key starting with with '_' for sorting before small letters
-         and with '~' for sorting after small letters.
+    Deprecated. Will be removed in Docutils 0.24.
     """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn('`writers.latex2e.SortableDict` is obsolete'
+                      ' and will be removed in Docutils 0.24.',
+                      DeprecationWarning, stacklevel=2)
+        super().__init__(*args, **kwargs)
+
     def sortedkeys(self):
         """Return sorted list of keys"""
         return sorted(self.keys())
@@ -516,6 +522,16 @@ class PreambleCmds:
 
 
 # Requirements and Setup
+
+# Not in docutils.sty because of the overhead for every font change:
+PreambleCmds.ch = r"""
+\ifdefined\DUchdimen  % lengh unit "ch": width of a zero char
+\else
+  \newlength{\DUchdimen}
+  \AtBeginDocument{\settowidth\DUchdimen{0}}  % set after font setup,
+  % update with font changes (requires LaTeX > 2021-06-01, see lthooks-doc.pdf)
+  \AddToHook{cmd/selectfont/after}{\settowidth\DUchdimen{0}}
+\fi"""
 
 PreambleCmds.color = r"""\usepackage{color}"""
 
@@ -1025,19 +1041,6 @@ class Table:
         except IndexError:
             return 'l'
 
-    def get_caption(self) -> str:
-        """Deprecated. Will be removed in Docutils 0.22."""
-        warnings.warn('`writers.latex2e.Table.get_caption()` is obsolete'
-                      ' and will be removed in Docutils 0.22.',
-                      DeprecationWarning, stacklevel=2)
-
-        if not self.caption:
-            return ''
-        caption = ''.join(self.caption)
-        if 1 == self._translator.thead_depth():
-            return r'\caption{%s}\\' '\n' % caption
-        return r'\caption[]{%s (... continued)}\\' '\n' % caption
-
     def need_recurse(self):
         if self._latex_type == 'longtable':
             return 1 == self._translator.thead_depth()
@@ -1257,9 +1260,9 @@ class LaTeXTranslator(nodes.NodeVisitor):
         self.head_prefix = [r'\documentclass[%s]{%s}' %
                             (self.documentoptions,
                              settings.documentclass)]
-        self.requirements = SortableDict()  # made a list in depart_document()
+        self.requirements = {}  # converted to a list in depart_document()
         self.latex_preamble = [settings.latex_preamble]
-        self.fallbacks = SortableDict()  # made a list in depart_document()
+        self.fallbacks = {}  # converted to a list in depart_document()
         self.pdfsetup = []  # PDF properties (hyperref package)
         self.title = []
         self.subtitle = []
@@ -1354,8 +1357,8 @@ class LaTeXTranslator(nodes.NodeVisitor):
                 self.fallback_stylesheet = False
             else:
                 # require a minimal version:
-                self.fallbacks['docutils.sty'] = (
-                    r'\usepackage{docutils}[2020/08/28]')
+                self.fallbacks['_docutils.sty'] = (
+                    r'\usepackage{docutils}[2024-09-24]')
 
         self.stylesheet = [self.stylesheet_call(path)
                            for path in stylesheet_list]
@@ -2023,10 +2026,6 @@ class LaTeXTranslator(nodes.NodeVisitor):
         if (self.babel.otherlanguages
             or self.babel.language not in ('', 'english')):
             self.requirements['babel'] = self.babel()
-        # * conditional requirements (before style sheet)
-        self.requirements = self.requirements.sortedvalues()
-        # * coditional fallback definitions (after style sheet)
-        self.fallbacks = self.fallbacks.sortedvalues()
         # * PDF properties
         self.pdfsetup.append(PreambleCmds.linking % self.hyperref_options)
         if self.pdfauthor:
@@ -2044,6 +2043,12 @@ class LaTeXTranslator(nodes.NodeVisitor):
         # * make sure to generate a toc file if needed for local contents:
         if 'minitoc' in self.requirements and not self.has_latex_toc:
             self.out.append('\n\\faketableofcontents % for local ToCs\n')
+        # * conditional requirements (before style sheet)
+        self.requirements = [self.requirements[key]
+                             for key in sorted(self.requirements.keys())]
+        # * coditional fallback definitions (after style sheet)
+        self.fallbacks = [self.fallbacks[key]
+                          for key in sorted(self.fallbacks.keys())]
 
     def make_title(self) -> None:
         # Auxiliary function called by `self.depart_document()`.
@@ -2393,18 +2398,38 @@ class LaTeXTranslator(nodes.NodeVisitor):
         self.requirements['~header'] = ''.join(self.out)
         self.pop_output_collector()
 
-    def to_latex_length(self, length_str: str) -> str:
+    def to_latex_length(self, length_str, node=None) -> str:
         """Convert "measure" `length_str` to LaTeX length specification.
 
         Note: the default length unit will change from "bp"
         (Postscript point) to "px" in Docutils 1.0.
         """
         value, unit = nodes.parse_measure(length_str)
+        if unit in ('em', 'ex', 'cm', 'mm', 'in', 'pc', 'px',
+                    'bp', 'cc', 'dd', 'sp', 'mu'):  # TeX unit == CSS unit
+            return length_str
         if unit in ('', 'pt'):  # no unit or "Postscript points"
             return f'{value}bp'  # LaTeX uses symbol "bp"
+        if unit == 'Q':
+            return f'{value/4}mm'
         if unit == '%':  # percentage: relate to current line width
             return f'{value/100:g}\\linewidth'
-        return length_str
+        if unit == 'vw':  # viewport width: relate to page width
+            return f'{value/100:g}\\paperwidth'
+        if unit == 'vh':  # viewport height: relate to page height
+            return f'{value/100:g}\\paperheight'
+        # emulate with macro modelled on pdfLaTeX's \pdfpxdimen
+        if not hasattr(PreambleCmds, unit):
+            self.warn(f'Unit "{unit}" not supported by LaTeX.\n'
+                      f'  Define lenght "\\DU{unit}dimen" in preamble,'
+                      ' raw LaTeX, or custom stylesheet.',
+                      base_node=node)
+        elif unit == 'ch':
+            self.fallbacks['ch'] = PreambleCmds.ch
+        elif not self.fallback_stylesheet:
+            self.fallbacks['_providelength'] = PreambleCmds.providelength
+            self.fallbacks[unit] = getattr(PreambleCmds, unit)
+        return f'{value}\\DU{unit}dimen'
 
     def visit_image(self, node) -> None:
         self.requirements['graphicx'] = self.graphicx_package
@@ -2441,13 +2466,12 @@ class LaTeXTranslator(nodes.NodeVisitor):
                 pass                    # TODO: warn?
         if 'height' in attrs:
             include_graphics_options.append(
-                'height=%s' % self.to_latex_length(attrs['height']))
+                f"height={self.to_latex_length(attrs['height'], node)}")
         if 'scale' in attrs:
-            include_graphics_options.append(
-                'scale=%g' % (attrs['scale'] / 100.0))
+            include_graphics_options.append(f"scale={attrs['scale']/100:g}")
         if 'width' in attrs:
             include_graphics_options.append(
-                'width=%s' % self.to_latex_length(attrs['width']))
+                f"width={self.to_latex_length(attrs['width'], node)}")
         if not (self.is_inline(node)
                 or isinstance(node.parent, (nodes.figure, nodes.compound))):
             pre.append('\n')
@@ -3011,7 +3035,7 @@ class LaTeXTranslator(nodes.NodeVisitor):
         content = self.out
         self.pop_output_collector()
         try:
-            width = self.to_latex_length(node['width'])
+            width = self.to_latex_length(node['width'], node)
         except KeyError:
             width = r'\linewidth'
         # Insert hyperlabel and anchor before the table
