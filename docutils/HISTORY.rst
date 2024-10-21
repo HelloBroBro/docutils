@@ -29,8 +29,6 @@ Release 0.22b.dev (unpublished)
     Python >= 3.10 is required with active type hints
     (``typing.TYPE_CHECKING == True``).
 
-  - Fix license issue (bug #487).
-
 * docs/ref/docutils.dtd
 
   - Allow multiple <term> elements in a <definition_list_item>.
@@ -204,6 +202,7 @@ Release 0.22b.dev (unpublished)
   - Fix conversion factor of "pc" (pica) to "cm".
   - Fix conversion of image width in "%" if the height is specified.
   - Adjust fallback DPI value (currently not used) to match CSS units.
+  - Fix errors with "*.xml" style files (bug #494).
 
 * pyproject.toml
 
