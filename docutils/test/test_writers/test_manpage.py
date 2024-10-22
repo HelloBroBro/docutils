@@ -10,6 +10,8 @@ Tests for manpage writer.
 from pathlib import Path
 import sys
 import unittest
+from io import StringIO
+import docutils
 
 if __name__ == '__main__':
     # prepend the "docutils root" to the Python library path
@@ -69,6 +71,26 @@ class WriterPublishTestCase(unittest.TestCase):
                             'use_reference_macros': True,
                         }).decode()
                     self.assertEqual(case_expected, output)
+
+    def test_system_msgs(self):
+        for name, cases in totest_system_msgs.items():
+            for casenum, (case_input, case_expected, case_warning) in enumerate(cases):
+                with self.subTest(id=f'totest_system_msgs[{name!r}][{casenum}]'):
+                    warnings = StringIO("")
+                    output = publish_string(
+                        source=case_input,
+                        writer=manpage.Writer(),
+                        settings_overrides={
+                            '_disable_config': True,
+                            'strict_visitor': True,
+                            'warning_stream': warnings,
+                        }).decode()
+                    self.assertEqual(case_expected, output)
+                    warnings.seek(0)
+                    self.assertEqual(
+                            case_warning,
+                            warnings.readlines())
+
 
 
 document_start = r""".\" Man page generated from reStructuredText by manpage writer
@@ -562,9 +584,13 @@ Test title, docinfo to man page header.
 """],
 ]
 
-# TODO check we get an INFO not a WARNING
-totest['image'] = [
-        ["""text
+# test defintion
+# [ input, expect, expected_warning ]
+totest_system_msgs ={}
+# check we get an INFO not a WARNING
+totest_system_msgs['image'] = [
+        ["""\
+text
 
 .. image:: gibsnich.png
    :alt: an image of something
@@ -575,27 +601,18 @@ document_start + indend_macros + """.TH "" "" "" ""
 .SH Name
  \\- \n\
 text
-[image: an image of something/gibsnich.png]
+.sp
+    an image of something
 .sp
 more text
 .\\" End of generated man page.
-"""],
-# TODO make alt text a quote like
-#
-# text
-#
-#    an image of something
-#
-# more text
-]
+""",
+[]
+# TODO check INFO text
+# INFO not in warning_stream    #<string>:3: (INFO/1) "image" not supported\"""
+],
 
-# TODO check we get a WARNING
-#
-#   (WARNING/2) "image" not supported by "manpage" writer.
-#   Please provide an "alt" attribute with textual replacement.
-#
-
-totest['image-without-alt'] = [
+# check we get a WARNING if no alt text
         ["""text
 
 .. image:: gibsnich.png
@@ -606,12 +623,15 @@ document_start + indend_macros + """.TH "" "" "" ""
 .SH Name
  \\- \n\
 text
-[image: gibsnich.png]
+.sp
+    image: gibsnich.png
 .sp
 more text
 .\\" End of generated man page.
-"""],
-# TODO there should be nothing of the image in the manpage, might be decorative
+""",
+[ '<string>:3: (WARNING/2) "image" not supported by "manpage" writer.\n',
+'Please provide an "alt" attribute with textual replacement.\n']
+]
 ]
 
 
