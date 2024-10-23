@@ -11,7 +11,6 @@ from pathlib import Path
 import sys
 import unittest
 from io import StringIO
-import docutils
 
 if __name__ == '__main__':
     # prepend the "docutils root" to the Python library path
@@ -83,6 +82,7 @@ class WriterPublishTestCase(unittest.TestCase):
                         settings_overrides={
                             '_disable_config': True,
                             'strict_visitor': True,
+                            'report_level': 1,
                             'warning_stream': warnings,
                         }).decode()
                     self.assertEqual(case_expected, output)
@@ -90,7 +90,6 @@ class WriterPublishTestCase(unittest.TestCase):
                     self.assertEqual(
                             case_warning,
                             warnings.readlines())
-
 
 
 document_start = r""".\" Man page generated from reStructuredText by manpage writer
@@ -586,7 +585,7 @@ Test title, docinfo to man page header.
 
 # test defintion
 # [ input, expect, expected_warning ]
-totest_system_msgs ={}
+totest_system_msgs = {}
 # check we get an INFO not a WARNING
 totest_system_msgs['image'] = [
         ["""\
@@ -607,9 +606,7 @@ text
 more text
 .\\" End of generated man page.
 """,
-[]
-# TODO check INFO text
-# INFO not in warning_stream    #<string>:3: (INFO/1) "image" not supported\"""
+['<string>:3: (INFO/1) "image" not supported by "manpage" writer.\n']
 ],
 
 # check we get a WARNING if no alt text
@@ -629,7 +626,7 @@ text
 more text
 .\\" End of generated man page.
 """,
-[ '<string>:3: (WARNING/2) "image" not supported by "manpage" writer.\n',
+['<string>:3: (WARNING/2) "image" not supported by "manpage" writer.\n',
 'Please provide an "alt" attribute with textual replacement.\n']
 ]
 ]
