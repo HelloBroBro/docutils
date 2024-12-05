@@ -25,8 +25,6 @@ import mimetypes
 import os
 import os.path
 import re
-import urllib.parse
-import urllib.request
 import warnings
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -186,13 +184,13 @@ class Writer(writers.Writer):
             self.parts[part] = ''.join(getattr(self, part))
 
 
-class HTMLTranslator(nodes.NodeVisitor):
+class HTMLTranslator(writers.DoctreeTranslator):
 
     """
     Generic Docutils to HTML translator.
 
     See the `html4css1` and `html5_polyglot` writers for full featured
-    HTML writers.
+    HTML translators.
 
     .. IMPORTANT::
       The `visit_*` and `depart_*` methods use a
@@ -292,9 +290,9 @@ class HTMLTranslator(nodes.NodeVisitor):
     """MIME types supported by the HTML5 <video> element."""
 
     def __init__(self, document) -> None:
-        nodes.NodeVisitor.__init__(self, document)
+        super().__init__(document)
         # process settings
-        self.settings = settings = document.settings
+        settings = self.settings
         self.language = languages.get_language(
                             settings.language_code, document.reporter)
         self.initial_header_level = int(settings.initial_header_level)
@@ -460,7 +458,7 @@ class HTMLTranslator(nodes.NodeVisitor):
             reading_problems.append('Reading external files disabled.')
         if not reading_problems:
             try:
-                imagepath = self.uri2imagepath(uri)
+                imagepath = self.uri2path(uri)
                 with PIL.Image.open(imagepath) as img:
                     imgsize = img.size
             except (ValueError, OSError, UnicodeEncodeError) as err:
@@ -533,7 +531,7 @@ class HTMLTranslator(nodes.NodeVisitor):
         # else link to style file:
         if adjust_path:
             # rewrite path relative to output (cf. config.html#stylesheet-path)
-            path = utils.relative_path(self.settings._destination, path)
+            path = utils.relative_path(self.settings.output_path, path)
         return self.stylesheet_link % self.encode(path)
 
     def starttag(self, node, tagname, suffix='\n', empty=False, **attributes):
@@ -625,39 +623,6 @@ class HTMLTranslator(nodes.NodeVisitor):
         except IndexError:
             return
         child['classes'].append(class_)
-
-    def uri2imagepath(self, uri):
-        """Get POSIX filesystem path corresponding to an URI.
-
-        The image directive expects an image URI__. Some writers require the
-        corresponding image path to read the image size from the file or to
-        embed the image in the output.
-
-        URIs with absolute "path" part consider the ``root_prefix`` setting.
-
-        In order to work in the output document, URI references with relative
-        path relate to the output directory.  For access by the writer, the
-        corresponding image path must be relative to the current working
-        directory.
-
-        Provisional: the function's location, interface and behaviour
-        may change without advance warning.
-
-        __ https://www.rfc-editor.org/rfc/rfc3986.html
-        """
-        destination = self.settings._destination or ''
-        uri_parts = urllib.parse.urlparse(uri)
-        if uri_parts.scheme not in ('', 'file'):
-            raise ValueError('Can only read local images.')
-        imagepath = urllib.parse.unquote(uri_parts.path)
-        if self.settings.root_prefix and imagepath.startswith('/'):
-            root_prefix = Path(self.settings.root_prefix)
-            imagepath = (root_prefix/imagepath.removeprefix('/')).as_posix()
-        elif not os.path.isabs(imagepath):  # path may be absolute Windows path
-            destdir = os.path.abspath(os.path.dirname(destination))
-            imagepath = utils.relative_path(None,
-                                            os.path.join(destdir, imagepath))
-        return imagepath
 
     def visit_Text(self, node) -> None:
         text = node.astext()
@@ -1187,7 +1152,7 @@ class HTMLTranslator(nodes.NodeVisitor):
             atts['loading'] = 'lazy'
         elif loading == 'embed':
             try:
-                imagepath = self.uri2imagepath(uri)
+                imagepath = self.uri2path(uri)
                 if mimetype == 'image/svg+xml':
                     imagedata = Path(imagepath).read_text(encoding='utf-8')
                 else:

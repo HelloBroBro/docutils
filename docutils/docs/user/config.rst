@@ -232,7 +232,6 @@ Some knowledge of Python_ is assumed for some attributes.
 .. _ConfigParser.py:
    https://docs.python.org/3/library/configparser.html
 .. _Python: https://www.python.org/
-.. _RFC 822: https://www.rfc-editor.org/rfc/rfc822.txt
 __ ../api/runtime-settings.html#active-sections
 
 
@@ -471,21 +470,21 @@ The language of document parts can be specified with a
 *Default*: "en" (English).  *Options*: ``--language``, ``-l``.
 
 
-output
-------
+output_path
+-----------
 
-The path of the output destination.  Use "-" for `stdout`.
+Output file path or "-" for `stdout`.
 
 .. Caution:: **An existing file will be overwritten** without warning!
 
-Obsoletes the `_destination`_ positional argument
-(cf. `Future changes`_ in the RELEASE-NOTES).
+Obsoletes the second `positional argument`_ and the internal
+`_destination`_ setting (cf. `Future changes`_ in the RELEASE-NOTES).
 
-*Default*: None (stdout). *Option*: ``--output``.
+:Default: None (write to stdout).
+:Options: ``--output-path``, ``--output``.
 
-New in Docutils 0.20.
-
-.. _Future changes: ../../RELEASE-NOTES.html#future-changes
+New in Docutils 0.20.
+Renamed from "_`output`" to "output_path" in Docutils 0.22.
 
 
 output_encoding
@@ -589,17 +588,28 @@ root_prefix
 Base directory, prepended to a filesystem path__ starting with "/" when
 including files with the `"include"`_, `"raw"`_, or `"csv-table"`_
 directives.
+Also applied to the `"uri" attribute`_ of an <image> or <figure> starting
+with "/" when it is converted to a local filesystem path.
+Not applied to absolute Windows paths and ``file:`` URIs.
 
-Also applied when a writer converts an image URI__ to a local filesystem
-path in order to determine the image size or embed the image in the output.
+Example:
+  The HTML server for a documentation project serves files from the
+  "DocumentRoot" ``/var/www/html/``.
+  Image files are stored in a dedicated directory ``/var/www/html/pictures/``.
 
-:Default: "".
+  With ``root-prefix=/var/www/html``, the rST "image" directive ::
+
+    .. image:: /pictures/mylogo.png
+
+  works for LaTeX output and HTML output with embedded images as well as
+  for HTML output with images included via URI reference.
+
+:Default: "" (empty string).
 :Option:  ``--root-prefix``.
 
 New in Docutils 0.21.
 
 __ ../ref/rst/directives.html#path
-__ ../ref/rst/directives.html#uri
 
 
 sectnum_xform
@@ -610,7 +620,7 @@ Enable automatic section numbering by Docutils
 with the `"sectnum" directive`_.
 
 If disabled, section numbers might be added to the output by the
-renderer (e.g. by LaTeX or via a CSS style definition).
+renderer (e.g. by CSS style rules or by LaTeX).
 
 :Default: True.
 :Options: ``--section-numbering``, ``--no-section-numbering``.
@@ -1325,7 +1335,7 @@ stylesheet_path
 List of paths to CSS stylesheets (comma-separated_). Relative paths are
 expanded if a matching file is found in the stylesheet_dirs__.
 If embed_stylesheet__ is False, paths are rewritten relative to
-the output_ file (if specified) or the current work directory.
+the output_path_ (if specified) or the current work directory.
 
 See also `stylesheet_path [latex writers]`_.
 
@@ -1885,8 +1895,7 @@ stylesheet_path
 List of style files (comma-separated_). Relative paths are expanded if a
 matching file is found in the stylesheet_dirs__.
 If embed_stylesheet__ is False, paths are rewritten relative to
-the output file (if output_ or `_destination`_ are specified)
-or the current work directory.
+the output_path_ (if specified) or the current work directory.
 Overrides also stylesheet__. [#override]_
 See also `stylesheet_path [html writers]`_.
 
@@ -2194,7 +2203,7 @@ All visited directories are scanned for "docutils.conf" files which are
 parsed after the standard configuration files. Path settings [#pwd]_ in
 these files are resolved relative to the respective directory.
 
-The output_ setting is ignored.
+The output_path_ setting is ignored.
 
 dry_run
 ~~~~~~~
@@ -2394,10 +2403,9 @@ For command-line use, set the DOCUTILSCONFIG_ variable.
 
 _destination
 ~~~~~~~~~~~~
-Path to output destination, set from `positional arguments`_
-or the output_ setting.
+Path to the output file, set from `positional arguments`_.
 
-Deprecated, obsoleted by the output_ setting.  Will be removed
+Deprecated, obsoleted by the output_path_ setting.  Will be removed
 in Docutils 2.0 (cf. `Future changes`_ in the RELEASE-NOTES).
 
 *Default*: None (stdout).  *Option*: ``--output``.
@@ -2569,7 +2577,10 @@ If the first line matches the second line is ignored.
 .. _front-end tool:
 .. _front-end tools: tools.html
 .. _buildhtml.py: tools.html#buildhtml-py
+.. _positional argument:
 .. _positional arguments: tools.html#usage-pattern
+
+.. _Future changes: ../../RELEASE-NOTES.html#future-changes
 
 .. _BCP 47: https://www.rfc-editor.org/rfc/bcp/bcp47.txt
 .. _Error Handlers:
